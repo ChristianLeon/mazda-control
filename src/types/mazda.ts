@@ -113,7 +113,14 @@ export type Consumable = {
   notes?: string;
   isFavorite: boolean;
 };
-
+export type NewConsumableInput = {
+  name: string;
+  category: Consumable["category"];
+  brand?: string;
+  specification?: string;
+  notes?: string;
+  isFavorite?: boolean;
+};
 export type MaintenanceRule = {
   id: string;
   vehicleId: string;
@@ -265,3 +272,4 @@ export type NewVehicleDocumentInput = {
   notes?: string;
   status: VehicleDocumentStatus;
 };
+

@@ -27,6 +27,9 @@ function App() {
     addWorkshop,
     updateWorkshop,
     deleteWorkshop,
+    addConsumable,
+    updateConsumable,
+    deleteConsumable,
     addDocument,
     updateDocument,
     deleteDocument,
@@ -111,6 +114,8 @@ function App() {
             issues={data.issues}
             workshops={data.workshops}
             documents={data.documents}
+            onUpdateConsumable={updateConsumable}
+            onDeleteConsumable={deleteConsumable}
             onUpdateIssue={updateIssue}
             onUpdateIssueStatus={updateIssueStatus}
             onDeleteIssue={deleteIssue}
@@ -135,6 +140,7 @@ function App() {
         onSaveService={addVehicleRecord}
         onSaveIssue={addIssue}
         onSaveWorkshop={addWorkshop}
+        onSaveConsumable={addConsumable}
         onSaveDocument={addDocument}
       />
     </main>

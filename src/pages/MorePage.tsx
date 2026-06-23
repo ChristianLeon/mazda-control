@@ -2,6 +2,7 @@
 import Card from "../components/Card";
 import type {
   Consumable,
+  NewConsumableInput,
   NewVehicleDocumentInput,
   NewVehicleIssueInput,
   NewWorkshopInput,
@@ -26,6 +27,8 @@ type MorePageProps = {
   issues: VehicleIssue[];
   workshops: Workshop[];
   documents: VehicleDocument[];
+  onUpdateConsumable: (consumableId: string, input: NewConsumableInput) => void;
+  onDeleteConsumable: (consumableId: string) => void;
   onUpdateIssue: (issueId: string, input: UpdateVehicleIssueInput) => void;
   onUpdateIssueStatus: (issueId: string, status: VehicleIssue["status"]) => void;
   onDeleteIssue: (issueId: string) => void;
@@ -90,6 +93,21 @@ const workshopTypes: { value: Workshop["type"]; label: string }[] = [
   { value: "parts_store", label: "Refaccionaria" },
   { value: "detailing", label: "Lavado / detailing" },
   { value: "other", label: "Otro" },
+];
+
+const consumableCategories: {
+  value: Consumable["category"];
+  label: string;
+}[] = [
+  { value: "oil", label: "Aceite / lubricante" },
+  { value: "filter", label: "Filtro" },
+  { value: "tires", label: "Llanta" },
+  { value: "wipers", label: "Limpiador" },
+  { value: "battery", label: "Batería" },
+  { value: "spark_plugs", label: "Bujía" },
+  { value: "fluids", label: "Fluido" },
+  { value: "cleaning", label: "Limpieza / aditivo" },
+  { value: "other", label: "Otra refacción" },
 ];
 
 type TripChecklistItem = {
@@ -231,19 +249,10 @@ function getWorkshopTypeLabel(type: Workshop["type"]) {
 }
 
 function getConsumableCategoryLabel(category: Consumable["category"]) {
-  const labels: Record<Consumable["category"], string> = {
-    oil: "Aceite / lubricante",
-    filter: "Filtro",
-    tires: "Llanta",
-    wipers: "Limpiador",
-    battery: "Batería",
-    spark_plugs: "Bujía",
-    fluids: "Fluido",
-    cleaning: "Limpieza / aditivo",
-    other: "Otra refacción",
-  };
-
-  return labels[category];
+  return (
+    consumableCategories.find((item) => item.value === category)?.label ??
+    "Refacción"
+  );
 }
 
 function getPriorityClasses(priority: VehicleIssue["priority"]) {
@@ -520,6 +529,154 @@ function TripChecklistPanel() {
         );
       })}
     </div>
+  );
+}
+
+function ConsumableEditForm({
+  consumable,
+  onCancel,
+  onSave,
+}: {
+  consumable: Consumable;
+  onCancel: () => void;
+  onSave: (consumableId: string, input: NewConsumableInput) => void;
+}) {
+  const [name, setName] = useState(consumable.name);
+  const [category, setCategory] = useState<Consumable["category"]>(
+    consumable.category
+  );
+  const [brand, setBrand] = useState(consumable.brand ?? "");
+  const [specification, setSpecification] = useState(
+    consumable.specification ?? ""
+  );
+  const [notes, setNotes] = useState(consumable.notes ?? "");
+  const [isFavorite, setIsFavorite] = useState(Boolean(consumable.isFavorite));
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!name.trim()) return;
+
+    onSave(consumable.id, {
+      name,
+      category,
+      brand,
+      specification,
+      notes,
+      isFavorite,
+    });
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-3xl border border-red-900/70 bg-zinc-900 p-4"
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-400">
+        Editando pieza / refacción
+      </p>
+
+      <div className="mt-4 space-y-3">
+        <div>
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Nombre
+          </label>
+
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Categoría
+          </label>
+
+          <select
+            value={category}
+            onChange={(event) =>
+              setCategory(event.target.value as Consumable["category"])
+            }
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          >
+            {consumableCategories.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Marca
+          </label>
+
+          <input
+            value={brand}
+            onChange={(event) => setBrand(event.target.value)}
+            placeholder="Opcional"
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Especificación / medida
+          </label>
+
+          <input
+            value={specification}
+            onChange={(event) => setSpecification(event.target.value)}
+            placeholder="Opcional"
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
+        </div>
+
+        <label className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+          <input
+            type="checkbox"
+            checked={isFavorite}
+            onChange={(event) => setIsFavorite(event.target.checked)}
+            className="h-5 w-5 accent-red-700"
+          />
+
+          <span className="text-sm text-zinc-200">Marcar como favorito</span>
+        </label>
+
+        <div>
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Notas
+          </label>
+
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            rows={3}
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-2xl border border-zinc-700 px-4 py-3 font-semibold text-zinc-300"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            className="rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white"
+          >
+            Guardar
+          </button>
+        </div>
+      </div>
+    </form>
   );
 }
 
@@ -1078,6 +1235,8 @@ export default function MorePage({
   issues,
   workshops,
   documents,
+  onUpdateConsumable,
+  onDeleteConsumable,
   onUpdateIssue,
   onUpdateIssueStatus,
   onDeleteIssue,
@@ -1094,6 +1253,9 @@ export default function MorePage({
     null
   );
   const [editingWorkshopId, setEditingWorkshopId] = useState<string | null>(
+    null
+  );
+  const [editingConsumableId, setEditingConsumableId] = useState<string | null>(
     null
   );
 
@@ -1135,7 +1297,7 @@ export default function MorePage({
         subtitle: "Editar proveedores y favoritos",
       },
       consumables: {
-        title: "Refacciones",
+        title: "Piezas / Refacciones",
         subtitle: "Catálogo útil de piezas, fluidos y especificaciones",
       },
       "trip-checklist": {
@@ -1149,6 +1311,20 @@ export default function MorePage({
     };
 
     return titles[panel];
+  }
+
+  function saveConsumable(consumableId: string, input: NewConsumableInput) {
+    onUpdateConsumable(consumableId, input);
+    setEditingConsumableId(null);
+  }
+
+  function deleteConsumable(consumableId: string) {
+    const confirmed = window.confirm("¿Eliminar esta pieza / refacción?");
+
+    if (confirmed) {
+      onDeleteConsumable(consumableId);
+      setEditingConsumableId(null);
+    }
   }
 
   function saveIssue(issueId: string, input: UpdateVehicleIssueInput) {
@@ -1191,6 +1367,77 @@ export default function MorePage({
       onDeleteWorkshop(workshopId);
       setEditingWorkshopId(null);
     }
+  }
+
+  function renderConsumableCard(item: Consumable) {
+    if (editingConsumableId === item.id) {
+      return (
+        <ConsumableEditForm
+          key={item.id}
+          consumable={item}
+          onCancel={() => setEditingConsumableId(null)}
+          onSave={saveConsumable}
+        />
+      );
+    }
+
+    return (
+      <article
+        key={item.id}
+        className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-white">{item.name}</p>
+
+            <p className="mt-1 text-xs text-zinc-500">
+              {getConsumableCategoryLabel(item.category)}
+              {item.brand ? ` · ${item.brand}` : ""}
+            </p>
+          </div>
+
+          {item.isFavorite && (
+            <span className="shrink-0 rounded-full border border-yellow-700 bg-yellow-950/30 px-3 py-1 text-xs font-semibold text-yellow-300">
+              Favorito
+            </span>
+          )}
+        </div>
+
+        {item.specification && (
+          <div className="mt-3 rounded-2xl bg-zinc-900 p-3">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+              Especificación / medida
+            </p>
+
+            <p className="mt-1 text-sm font-semibold text-zinc-200">
+              {item.specification}
+            </p>
+          </div>
+        )}
+
+        {item.notes && (
+          <p className="mt-3 rounded-2xl bg-zinc-900 p-3 text-sm text-zinc-400">
+            {item.notes}
+          </p>
+        )}
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setEditingConsumableId(item.id)}
+            className="rounded-2xl bg-red-700 px-3 py-3 text-sm font-semibold text-white"
+          >
+            Editar
+          </button>
+
+          <button
+            onClick={() => deleteConsumable(item.id)}
+            className="rounded-2xl border border-red-900 px-3 py-3 text-sm font-semibold text-red-400"
+          >
+            Eliminar
+          </button>
+        </div>
+      </article>
+    );
   }
 
   function renderIssueCard(issue: VehicleIssue) {
@@ -1520,13 +1767,13 @@ export default function MorePage({
             onClick={() => setActivePanel("workshops")}
           />
 
-         <MenuCard
-  icon="🔩"
-  title="Refacciones"
-  subtitle="Catálogo del Mazda"
-  metric={String(consumables.length)}
-  onClick={() => setActivePanel("consumables")}
-/>
+          <MenuCard
+            icon="🔩"
+            title="Piezas / Refacciones"
+            subtitle="Catálogo del Mazda"
+            metric={String(consumables.length)}
+            onClick={() => setActivePanel("consumables")}
+          />
 
           <MenuCard
             icon="🧳"
@@ -1553,6 +1800,7 @@ export default function MorePage({
             setEditingIssueId(null);
             setEditingDocumentId(null);
             setEditingWorkshopId(null);
+            setEditingConsumableId(null);
           }}
         >
           {activePanel === "costs" && (
@@ -1686,72 +1934,34 @@ export default function MorePage({
           )}
 
           {activePanel === "consumables" && (
-  <div className="space-y-3">
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4">
-      <p className="font-semibold text-white">Catálogo de referencia</p>
+            <div className="space-y-3">
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4">
+                <p className="font-semibold text-white">
+                  Catálogo de referencia
+                </p>
 
-      <p className="mt-1 text-sm text-zinc-500">
-        Usa esta sección para guardar qué piezas, refacciones, fluidos o
-        medidas usa tu Mazda. El historial real de cambios sigue en Historial
-        y Estado.
-      </p>
-    </div>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Guarda qué piezas, refacciones, fluidos o medidas usa tu
+                  Mazda. El historial real de cambios sigue en Historial y
+                  Estado.
+                </p>
+              </div>
 
-    {consumables.length === 0 ? (
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-center">
-        <p className="text-sm text-zinc-400">
-          Sin piezas o refacciones registradas.
-        </p>
+              {consumables.length === 0 ? (
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-center">
+                  <p className="text-sm text-zinc-400">
+                    Sin piezas o refacciones registradas.
+                  </p>
 
-        <p className="mt-1 text-xs text-zinc-600">
-          Después agregaremos alta, edición y eliminación desde este módulo.
-        </p>
-      </div>
-    ) : (
-      consumables.map((item) => (
-        <article
-          key={item.id}
-          className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-white">{item.name}</p>
-
-              <p className="mt-1 text-xs text-zinc-500">
-                {getConsumableCategoryLabel(item.category)}
-                {item.brand ? ` · ${item.brand}` : ""}
-              </p>
-            </div>
-
-            {item.isFavorite && (
-              <span className="shrink-0 rounded-full border border-yellow-700 bg-yellow-950/30 px-3 py-1 text-xs font-semibold text-yellow-300">
-                Favorito
-              </span>
-            )}
-          </div>
-
-          {item.specification && (
-            <div className="mt-3 rounded-2xl bg-zinc-900 p-3">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                Especificación / medida
-              </p>
-
-              <p className="mt-1 text-sm font-semibold text-zinc-200">
-                {item.specification}
-              </p>
+                  <p className="mt-1 text-xs text-zinc-600">
+                    Agrega una desde el botón + y selecciona Pza.
+                  </p>
+                </div>
+              ) : (
+                consumables.map((item) => renderConsumableCard(item))
+              )}
             </div>
           )}
-
-          {item.notes && (
-            <p className="mt-3 rounded-2xl bg-zinc-900 p-3 text-sm text-zinc-400">
-              {item.notes}
-            </p>
-          )}
-        </article>
-      ))
-    )}
-  </div>
-)}
 
           {activePanel === "trip-checklist" && <TripChecklistPanel />}
 

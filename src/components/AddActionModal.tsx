@@ -1,17 +1,19 @@
 ﻿import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type {
+  Consumable,
+  NewConsumableInput,
   NewServiceRecordInput,
   NewVehicleDocumentInput,
   NewVehicleIssueInput,
   NewWorkshopInput,
   VehicleDocumentStatus,
   VehicleDocumentType,
-  VehicleRecordType,
   VehicleIssue,
+  VehicleRecordType,
   Workshop,
 } from "../types/mazda";
 
-type AddMode = "service" | "issue" | "workshop" | "document";
+type AddMode = "service" | "issue" | "workshop" | "consumable" | "document";
 
 type AddActionModalProps = {
   isOpen: boolean;
@@ -21,6 +23,7 @@ type AddActionModalProps = {
   onSaveService: (input: NewServiceRecordInput) => void;
   onSaveIssue: (input: NewVehicleIssueInput) => void;
   onSaveWorkshop: (input: NewWorkshopInput) => void;
+  onSaveConsumable: (input: NewConsumableInput) => void;
   onSaveDocument: (input: NewVehicleDocumentInput) => void;
 };
 
@@ -54,6 +57,21 @@ const workshopTypes: { value: Workshop["type"]; label: string }[] = [
   { value: "parts_store", label: "Refaccionaria" },
   { value: "detailing", label: "Lavado / detailing" },
   { value: "other", label: "Otro" },
+];
+
+const consumableCategories: {
+  value: Consumable["category"];
+  label: string;
+}[] = [
+  { value: "oil", label: "Aceite / lubricante" },
+  { value: "filter", label: "Filtro" },
+  { value: "tires", label: "Llanta" },
+  { value: "wipers", label: "Limpiador" },
+  { value: "battery", label: "Batería" },
+  { value: "spark_plugs", label: "Bujía" },
+  { value: "fluids", label: "Fluido" },
+  { value: "cleaning", label: "Limpieza / aditivo" },
+  { value: "other", label: "Otra refacción" },
 ];
 
 const documentTypes: { value: VehicleDocumentType; label: string }[] = [
@@ -101,7 +119,7 @@ function ModeButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-2xl border px-3 py-3 text-sm font-semibold active:scale-[0.98] ${
+      className={`rounded-2xl border px-2 py-3 text-xs font-semibold active:scale-[0.98] ${
         active
           ? "border-red-700 bg-red-700 text-white"
           : "border-zinc-800 bg-zinc-950 text-zinc-400"
@@ -129,6 +147,7 @@ export default function AddActionModal({
   onSaveService,
   onSaveIssue,
   onSaveWorkshop,
+  onSaveConsumable,
   onSaveDocument,
 }: AddActionModalProps) {
   const [mode, setMode] = useState<AddMode>("service");
@@ -158,6 +177,14 @@ export default function AddActionModal({
   const [workshopRating, setWorkshopRating] = useState("");
   const [workshopFavorite, setWorkshopFavorite] = useState(false);
   const [workshopNotes, setWorkshopNotes] = useState("");
+
+  const [consumableName, setConsumableName] = useState("");
+  const [consumableCategory, setConsumableCategory] =
+    useState<Consumable["category"]>("other");
+  const [consumableBrand, setConsumableBrand] = useState("");
+  const [consumableSpecification, setConsumableSpecification] = useState("");
+  const [consumableFavorite, setConsumableFavorite] = useState(false);
+  const [consumableNotes, setConsumableNotes] = useState("");
 
   const [documentType, setDocumentType] =
     useState<VehicleDocumentType>("other");
@@ -246,9 +273,7 @@ export default function AddActionModal({
     const mileage = cleanNumber(serviceMileage);
     const cost = cleanNumber(serviceCost);
 
-    if (!Number.isFinite(mileage) || mileage <= 0) {
-      return;
-    }
+    if (!Number.isFinite(mileage) || mileage <= 0) return;
 
     onSaveService({
       type: serviceType,
@@ -271,13 +296,8 @@ export default function AddActionModal({
     const mileage = cleanNumber(issueMileage);
     const cost = cleanNumber(issueCost);
 
-    if (!issueTitle.trim()) {
-      return;
-    }
-
-    if (!Number.isFinite(mileage) || mileage <= 0) {
-      return;
-    }
+    if (!issueTitle.trim()) return;
+    if (!Number.isFinite(mileage) || mileage <= 0) return;
 
     onSaveIssue({
       title: issueTitle,
@@ -295,9 +315,7 @@ export default function AddActionModal({
 
     const rating = cleanNumber(workshopRating);
 
-    if (!workshopName.trim()) {
-      return;
-    }
+    if (!workshopName.trim()) return;
 
     onSaveWorkshop({
       name: workshopName,
@@ -305,8 +323,26 @@ export default function AddActionModal({
       phone: workshopPhone,
       address: workshopAddress,
       notes: workshopNotes,
-      rating: Number.isFinite(rating) && rating > 0 ? Math.min(rating, 5) : undefined,
+      rating:
+        Number.isFinite(rating) && rating > 0 ? Math.min(rating, 5) : undefined,
       isFavorite: workshopFavorite,
+    });
+
+    resetAndClose();
+  }
+
+  function handleSaveConsumable(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!consumableName.trim()) return;
+
+    onSaveConsumable({
+      name: consumableName,
+      category: consumableCategory,
+      brand: consumableBrand,
+      specification: consumableSpecification,
+      notes: consumableNotes,
+      isFavorite: consumableFavorite,
     });
 
     resetAndClose();
@@ -317,9 +353,7 @@ export default function AddActionModal({
 
     const cost = cleanNumber(documentCost);
 
-    if (!documentTitle.trim()) {
-      return;
-    }
+    if (!documentTitle.trim()) return;
 
     onSaveDocument({
       type: documentType,
@@ -336,9 +370,7 @@ export default function AddActionModal({
     resetAndClose();
   }
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-3 pb-3">
@@ -366,7 +398,7 @@ export default function AddActionModal({
             </button>
           </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-2">
+          <div className="mt-4 grid grid-cols-5 gap-2">
             <ModeButton
               active={mode === "service"}
               icon="🧰"
@@ -386,6 +418,12 @@ export default function AddActionModal({
               onClick={() => setMode("workshop")}
             />
             <ModeButton
+              active={mode === "consumable"}
+              icon="🔩"
+              label="Pza."
+              onClick={() => setMode("consumable")}
+            />
+            <ModeButton
               active={mode === "document"}
               icon="📁"
               label="Doc"
@@ -401,8 +439,7 @@ export default function AddActionModal({
                 Servicio / mantenimiento
               </p>
               <p className="mt-1 text-xs text-zinc-500">
-                Registra servicios, reparaciones, cambio de aceite, frenos,
-                llantas o gastos del vehículo.
+                Registra servicios, reparaciones, cambios y gastos del vehículo.
               </p>
             </div>
 
@@ -725,12 +762,107 @@ export default function AddActionModal({
           </form>
         )}
 
+        {mode === "consumable" && (
+          <form onSubmit={handleSaveConsumable} className="space-y-3">
+            <div className="rounded-3xl border border-blue-900/70 bg-blue-950/20 p-4">
+              <p className="text-sm font-semibold text-blue-300">
+                Pieza / Refacción
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Guarda piezas, fluidos, medidas, marcas o especificaciones
+                útiles para el Mazda.
+              </p>
+            </div>
+
+            <div>
+              <FieldLabel>Nombre</FieldLabel>
+              <input
+                value={consumableName}
+                onChange={(event) => setConsumableName(event.target.value)}
+                placeholder="Ej. Aceite 5W-30, batería LTH, filtro de cabina..."
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+              />
+            </div>
+
+            <div>
+              <FieldLabel>Categoría</FieldLabel>
+              <select
+                value={consumableCategory}
+                onChange={(event) =>
+                  setConsumableCategory(
+                    event.target.value as Consumable["category"]
+                  )
+                }
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+              >
+                {consumableCategories.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <FieldLabel>Marca</FieldLabel>
+              <input
+                value={consumableBrand}
+                onChange={(event) => setConsumableBrand(event.target.value)}
+                placeholder="Ej. Liqui Moly, LTH, Michelin, Pirelli..."
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+              />
+            </div>
+
+            <div>
+              <FieldLabel>Especificación / medida</FieldLabel>
+              <input
+                value={consumableSpecification}
+                onChange={(event) =>
+                  setConsumableSpecification(event.target.value)
+                }
+                placeholder="Ej. 5W-30, 225/45 R19, FL-22..."
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+              />
+            </div>
+
+            <label className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+              <input
+                type="checkbox"
+                checked={consumableFavorite}
+                onChange={(event) =>
+                  setConsumableFavorite(event.target.checked)
+                }
+                className="h-5 w-5 accent-red-700"
+              />
+              <span className="text-sm text-zinc-200">
+                Marcar como favorito
+              </span>
+            </label>
+
+            <div>
+              <FieldLabel>Notas</FieldLabel>
+              <textarea
+                value={consumableNotes}
+                onChange={(event) => setConsumableNotes(event.target.value)}
+                rows={3}
+                placeholder="Notas útiles para compra o reemplazo..."
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white"
+            >
+              Guardar pieza / refacción
+            </button>
+          </form>
+        )}
+
         {mode === "document" && (
           <form onSubmit={handleSaveDocument} className="space-y-3">
             <div className="rounded-3xl border border-blue-900/70 bg-blue-950/20 p-4">
-              <p className="text-sm font-semibold text-blue-300">
-                Documento
-              </p>
+              <p className="text-sm font-semibold text-blue-300">Documento</p>
               <p className="mt-1 text-xs text-zinc-500">
                 Registra seguro, verificación, tenencia, garantías o tickets.
               </p>

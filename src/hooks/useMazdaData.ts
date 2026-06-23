@@ -1,6 +1,8 @@
 ﻿import { useEffect, useState } from "react";
 import { initialVehicleStatus } from "../data/initialData";
 import type {
+  Consumable,
+  NewConsumableInput,
   NewServiceRecordInput,
   NewVehicleDocumentInput,
   NewVehicleIssueInput,
@@ -299,6 +301,54 @@ export function useMazdaData() {
     }));
   }
 
+  function addConsumable(input: NewConsumableInput) {
+  setData((currentData) => {
+    const newConsumable: Consumable = {
+      id: createId("consumable"),
+      vehicleId: currentData.vehicle.id,
+      name: input.name.trim() || "Refacción sin nombre",
+      category: input.category,
+      brand: input.brand?.trim() || undefined,
+      specification: input.specification?.trim() || undefined,
+      notes: input.notes?.trim() || undefined,
+      isFavorite: input.isFavorite ?? false,
+    };
+
+    return {
+      ...currentData,
+      consumables: [newConsumable, ...currentData.consumables],
+    };
+  });
+}
+
+  function updateConsumable(consumableId: string, input: NewConsumableInput) {
+  setData((currentData) => ({
+    ...currentData,
+    consumables: currentData.consumables.map((consumable) =>
+      consumable.id === consumableId
+        ? {
+            ...consumable,
+            name: input.name.trim() || "Refacción sin nombre",
+            category: input.category,
+            brand: input.brand?.trim() || undefined,
+            specification: input.specification?.trim() || undefined,
+            notes: input.notes?.trim() || undefined,
+            isFavorite: input.isFavorite ?? false,
+          }
+        : consumable
+    ),
+  }));
+}
+
+  function deleteConsumable(consumableId: string) {
+    setData((currentData) => ({
+      ...currentData,
+      consumables: currentData.consumables.filter(
+        (consumable) => consumable.id !== consumableId
+      ),
+    }));
+  }
+
   function addDocument(input: NewVehicleDocumentInput) {
     const now = new Date().toISOString();
 
@@ -387,6 +437,9 @@ export function useMazdaData() {
     addWorkshop,
     updateWorkshop,
     deleteWorkshop,
+    addConsumable,
+    updateConsumable,
+    deleteConsumable,
     addDocument,
     updateDocument,
     deleteDocument,
