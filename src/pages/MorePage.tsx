@@ -1,5 +1,6 @@
 ﻿import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import Card from "../components/Card";
+import TrafficCirculationPanel from "../components/TrafficCirculationPanel";
 import type {
   Consumable,
   NewConsumableInput,
@@ -47,6 +48,7 @@ type MorePanel =
   | "workshops"
   | "consumables"
   | "trip-checklist"
+  | "traffic"
   | "backup";
 
 const issuePriorities: { value: VehicleIssue["priority"]; label: string }[] = [
@@ -1304,6 +1306,10 @@ export default function MorePage({
         title: "Checklist de viaje",
         subtitle: "Revisión rápida antes de salir a carretera",
       },
+      traffic: {
+  title: "Tránsito y circulación",
+  subtitle: "Morelia, CDMX / EdoMex y accesos oficiales",
+},
       backup: {
         title: "Respaldo",
         subtitle: "Exportar o reiniciar datos locales",
@@ -1781,7 +1787,12 @@ export default function MorePage({
             subtitle="Antes de carretera"
             onClick={() => setActivePanel("trip-checklist")}
           />
-
+<MenuCard
+  icon="🚦"
+  title="Tránsito y circulación"
+  subtitle="Morelia, CDMX / EdoMex"
+  onClick={() => setActivePanel("traffic")}
+/>
           <MenuCard
             icon="💾"
             title="Respaldo"
@@ -1964,7 +1975,7 @@ export default function MorePage({
           )}
 
           {activePanel === "trip-checklist" && <TripChecklistPanel />}
-
+{activePanel === "traffic" && <TrafficCirculationPanel />}
           {activePanel === "backup" && (
             <div className="space-y-3">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
