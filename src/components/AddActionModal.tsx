@@ -1,15 +1,17 @@
-﻿import { useEffect, useState, type FormEvent } from "react";
+﻿import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type {
   NewServiceRecordInput,
   NewVehicleDocumentInput,
   NewVehicleIssueInput,
   NewWorkshopInput,
-  Priority,
   VehicleDocumentStatus,
   VehicleDocumentType,
   VehicleRecordType,
+  VehicleIssue,
   Workshop,
 } from "../types/mazda";
+
+type AddMode = "service" | "issue" | "workshop" | "document";
 
 type AddActionModalProps = {
   isOpen: boolean;
@@ -22,9 +24,7 @@ type AddActionModalProps = {
   onSaveDocument: (input: NewVehicleDocumentInput) => void;
 };
 
-type AddMode = "service" | "issue" | "workshop" | "document";
-
-const recordTypes: { value: VehicleRecordType; label: string }[] = [
+const serviceTypes: { value: VehicleRecordType; label: string }[] = [
   { value: "service", label: "Servicio general" },
   { value: "oil_change", label: "Cambio de aceite" },
   { value: "brakes", label: "Frenos / balatas" },
@@ -34,10 +34,13 @@ const recordTypes: { value: VehicleRecordType; label: string }[] = [
   { value: "repair", label: "Reparación" },
   { value: "diagnostic", label: "Diagnóstico" },
   { value: "cleaning", label: "Lavado / engrasado" },
+  { value: "verification", label: "Verificación" },
+  { value: "insurance", label: "Seguro" },
+  { value: "tax", label: "Tenencia / refrendo" },
   { value: "other", label: "Otro" },
 ];
 
-const priorities: { value: Priority; label: string }[] = [
+const issuePriorities: { value: VehicleIssue["priority"]; label: string }[] = [
   { value: "low", label: "Baja" },
   { value: "medium", label: "Media" },
   { value: "high", label: "Alta" },
@@ -75,8 +78,47 @@ const documentStatuses: { value: VehicleDocumentStatus; label: string }[] = [
   { value: "archived", label: "Archivado" },
 ];
 
-function today() {
+function getToday() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function cleanNumber(value: string) {
+  return Number(value.replace(/[^\d.]/g, ""));
+}
+
+function ModeButton({
+  active,
+  icon,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  icon: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-2xl border px-3 py-3 text-sm font-semibold active:scale-[0.98] ${
+        active
+          ? "border-red-700 bg-red-700 text-white"
+          : "border-zinc-800 bg-zinc-950 text-zinc-400"
+      }`}
+    >
+      <span className="mr-1">{icon}</span>
+      {label}
+    </button>
+  );
+}
+
+function FieldLabel({ children }: { children: string }) {
+  return (
+    <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+      {children}
+    </label>
+  );
 }
 
 export default function AddActionModal({
@@ -91,319 +133,356 @@ export default function AddActionModal({
 }: AddActionModalProps) {
   const [mode, setMode] = useState<AddMode>("service");
 
-  const [type, setType] = useState<VehicleRecordType>("service");
-  const [title, setTitle] = useState("Servicio / mantenimiento");
-  const [date, setDate] = useState(today());
-  const [mileage, setMileage] = useState(String(currentMileage));
-  const [cost, setCost] = useState("0");
-  const [workshopName, setWorkshopName] = useState("");
-  const [selectedWorkshopId, setSelectedWorkshopId] = useState("");
-  const [notes, setNotes] = useState("");
-  const [updateAsLastService, setUpdateAsLastService] = useState(true);
+  const [serviceType, setServiceType] = useState<VehicleRecordType>("service");
+  const [serviceTitle, setServiceTitle] = useState("Servicio general");
+  const [serviceDate, setServiceDate] = useState(getToday());
+  const [serviceMileage, setServiceMileage] = useState(String(currentMileage));
+  const [serviceCost, setServiceCost] = useState("");
+  const [serviceWorkshopId, setServiceWorkshopId] = useState("");
+  const [serviceWorkshopName, setServiceWorkshopName] = useState("");
+  const [serviceNotes, setServiceNotes] = useState("");
+  const [serviceUpdatesLastService, setServiceUpdatesLastService] =
+    useState(true);
 
   const [issueTitle, setIssueTitle] = useState("");
-  const [issuePriority, setIssuePriority] = useState<Priority>("medium");
+  const [issuePriority, setIssuePriority] =
+    useState<VehicleIssue["priority"]>("medium");
   const [issueMileage, setIssueMileage] = useState(String(currentMileage));
-  const [issueEstimatedCost, setIssueEstimatedCost] = useState("");
+  const [issueCost, setIssueCost] = useState("");
   const [issueNotes, setIssueNotes] = useState("");
 
-  const [workshopNameInput, setWorkshopNameInput] = useState("");
+  const [workshopName, setWorkshopName] = useState("");
   const [workshopType, setWorkshopType] = useState<Workshop["type"]>("mechanic");
   const [workshopPhone, setWorkshopPhone] = useState("");
   const [workshopAddress, setWorkshopAddress] = useState("");
-  const [workshopNotes, setWorkshopNotes] = useState("");
-  const [workshopRating, setWorkshopRating] = useState("5");
+  const [workshopRating, setWorkshopRating] = useState("");
   const [workshopFavorite, setWorkshopFavorite] = useState(false);
+  const [workshopNotes, setWorkshopNotes] = useState("");
 
-  const [documentType, setDocumentType] = useState<VehicleDocumentType>("other");
+  const [documentType, setDocumentType] =
+    useState<VehicleDocumentType>("other");
   const [documentTitle, setDocumentTitle] = useState("");
-  const [documentIssueDate, setDocumentIssueDate] = useState("");
+  const [documentStatus, setDocumentStatus] =
+    useState<VehicleDocumentStatus>("valid");
+  const [documentIssueDate, setDocumentIssueDate] = useState(getToday());
   const [documentExpirationDate, setDocumentExpirationDate] = useState("");
   const [documentCost, setDocumentCost] = useState("");
   const [documentProvider, setDocumentProvider] = useState("");
   const [documentFolio, setDocumentFolio] = useState("");
   const [documentNotes, setDocumentNotes] = useState("");
-  const [documentStatus, setDocumentStatus] =
-    useState<VehicleDocumentStatus>("valid");
+
+  const selectedWorkshop = useMemo(
+    () => workshops.find((workshop) => workshop.id === serviceWorkshopId),
+    [serviceWorkshopId, workshops]
+  );
 
   useEffect(() => {
     if (isOpen) {
-      setMileage(String(currentMileage));
+      setServiceMileage(String(currentMileage));
       setIssueMileage(String(currentMileage));
     }
-  }, [currentMileage, isOpen]);
+  }, [isOpen, currentMileage]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (serviceType === "oil_change") {
+      setServiceTitle("Cambio de aceite");
+      setServiceUpdatesLastService(true);
+    }
 
-  function resetServiceForm() {
-    setType("service");
-    setTitle("Servicio / mantenimiento");
-    setDate(today());
-    setCost("0");
-    setWorkshopName("");
-    setSelectedWorkshopId("");
-    setNotes("");
-    setUpdateAsLastService(true);
-  }
+    if (serviceType === "brakes") {
+      setServiceTitle("Frenos / balatas");
+    }
 
-  function resetIssueForm() {
-    setIssueTitle("");
-    setIssuePriority("medium");
-    setIssueMileage(String(currentMileage));
-    setIssueEstimatedCost("");
-    setIssueNotes("");
-  }
+    if (serviceType === "tires") {
+      setServiceTitle("Llantas");
+    }
 
-  function resetWorkshopForm() {
-    setWorkshopNameInput("");
-    setWorkshopType("mechanic");
-    setWorkshopPhone("");
-    setWorkshopAddress("");
-    setWorkshopNotes("");
-    setWorkshopRating("5");
-    setWorkshopFavorite(false);
-  }
+    if (serviceType === "battery") {
+      setServiceTitle("Batería");
+    }
 
-  function resetDocumentForm() {
-    setDocumentType("other");
-    setDocumentTitle("");
-    setDocumentIssueDate("");
-    setDocumentExpirationDate("");
-    setDocumentCost("");
-    setDocumentProvider("");
-    setDocumentFolio("");
-    setDocumentNotes("");
-    setDocumentStatus("valid");
-  }
+    if (serviceType === "transmission") {
+      setServiceTitle("Servicio de transmisión automática");
+    }
 
-  function handleServiceSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+    if (serviceType === "cleaning") {
+      setServiceTitle("Lavado / engrasado");
+      setServiceUpdatesLastService(false);
+    }
 
-    const cleanMileage = Number(mileage.replace(/[^\d]/g, ""));
-    const cleanCost = Number(cost.replace(/[^\d.]/g, ""));
+    if (serviceType === "service") {
+      setServiceTitle("Servicio general");
+      setServiceUpdatesLastService(true);
+    }
+  }, [serviceType]);
 
-    if (!Number.isFinite(cleanMileage) || cleanMileage <= 0) return;
+  useEffect(() => {
+    const defaultTitles: Record<VehicleDocumentType, string> = {
+      insurance: "Seguro",
+      verification: "Verificación",
+      tax: "Tenencia / refrendo",
+      registration: "Tarjeta de circulación",
+      invoice: "Factura",
+      warranty: "Garantía",
+      ticket: "Ticket",
+      service_order: "Orden de servicio",
+      manual: "Manual",
+      traffic_regulation: "Reglamento / guía vial",
+      other: "Documento",
+    };
 
-    const selectedWorkshop = workshops.find(
-      (workshop) => workshop.id === selectedWorkshopId
-    );
+    if (!documentTitle.trim()) {
+      setDocumentTitle(defaultTitles[documentType]);
+    }
+  }, [documentType, documentTitle]);
 
-    onSaveService({
-      type,
-      title,
-      date,
-      mileage: cleanMileage,
-      cost: Number.isFinite(cleanCost) ? cleanCost : 0,
-      workshopId: selectedWorkshop?.id,
-      workshopName: selectedWorkshop?.name ?? workshopName,
-      notes,
-      updateAsLastService,
-    });
-
-    resetServiceForm();
+  function resetAndClose() {
     onClose();
   }
 
-  function handleIssueSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSaveService(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const cleanMileage = Number(issueMileage.replace(/[^\d]/g, ""));
-    const cleanCost = Number(issueEstimatedCost.replace(/[^\d.]/g, ""));
+    const mileage = cleanNumber(serviceMileage);
+    const cost = cleanNumber(serviceCost);
 
-    if (!issueTitle.trim()) return;
-    if (!Number.isFinite(cleanMileage) || cleanMileage <= 0) return;
+    if (!Number.isFinite(mileage) || mileage <= 0) {
+      return;
+    }
+
+    onSaveService({
+      type: serviceType,
+      title: serviceTitle,
+      date: serviceDate,
+      mileage,
+      cost: Number.isFinite(cost) ? cost : 0,
+      workshopId: selectedWorkshop?.id,
+      workshopName: selectedWorkshop?.name ?? serviceWorkshopName,
+      notes: serviceNotes,
+      updateAsLastService: serviceUpdatesLastService,
+    });
+
+    resetAndClose();
+  }
+
+  function handleSaveIssue(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const mileage = cleanNumber(issueMileage);
+    const cost = cleanNumber(issueCost);
+
+    if (!issueTitle.trim()) {
+      return;
+    }
+
+    if (!Number.isFinite(mileage) || mileage <= 0) {
+      return;
+    }
 
     onSaveIssue({
       title: issueTitle,
       priority: issuePriority,
-      detectedMileage: cleanMileage,
-      estimatedCost: Number.isFinite(cleanCost) && cleanCost > 0 ? cleanCost : undefined,
+      detectedMileage: mileage,
+      estimatedCost: Number.isFinite(cost) && cost > 0 ? cost : undefined,
       notes: issueNotes,
     });
 
-    resetIssueForm();
-    onClose();
+    resetAndClose();
   }
 
-  function handleWorkshopSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSaveWorkshop(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const cleanRating = Number(workshopRating);
+    const rating = cleanNumber(workshopRating);
 
-    if (!workshopNameInput.trim()) return;
+    if (!workshopName.trim()) {
+      return;
+    }
 
     onSaveWorkshop({
-      name: workshopNameInput,
+      name: workshopName,
       type: workshopType,
       phone: workshopPhone,
       address: workshopAddress,
       notes: workshopNotes,
-      rating: Number.isFinite(cleanRating)
-        ? Math.min(Math.max(cleanRating, 1), 5)
-        : undefined,
+      rating: Number.isFinite(rating) && rating > 0 ? Math.min(rating, 5) : undefined,
       isFavorite: workshopFavorite,
     });
 
-    resetWorkshopForm();
-    onClose();
+    resetAndClose();
   }
 
-  function handleDocumentSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSaveDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const cleanCost = Number(documentCost.replace(/[^\d.]/g, ""));
+    const cost = cleanNumber(documentCost);
 
-    if (!documentTitle.trim()) return;
+    if (!documentTitle.trim()) {
+      return;
+    }
 
     onSaveDocument({
       type: documentType,
       title: documentTitle,
+      status: documentStatus,
       issueDate: documentIssueDate || undefined,
       expirationDate: documentExpirationDate || undefined,
-      cost: Number.isFinite(cleanCost) && cleanCost > 0 ? cleanCost : undefined,
+      cost: Number.isFinite(cost) && cost > 0 ? cost : undefined,
       provider: documentProvider,
       folio: documentFolio,
       notes: documentNotes,
-      status: documentStatus,
     });
 
-    resetDocumentForm();
-    onClose();
+    resetAndClose();
+  }
+
+  if (!isOpen) {
+    return null;
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-3 pb-3">
-      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-950 p-4 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red-500">
-              Nuevo registro
-            </p>
+      <div className="max-h-[94vh] w-full max-w-md overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-950 p-4 shadow-2xl">
+        <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 border-b border-zinc-800 bg-zinc-950/95 px-4 py-4 backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red-500">
+                Nuevo registro
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-white">
+                ¿Qué quieres agregar?
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Captura rápida para Mazda Control
+              </p>
+            </div>
 
-            <h2 className="mt-1 text-xl font-bold text-white">
-              {mode === "service"
-                ? "Servicio / mantenimiento"
-                : mode === "issue"
-                  ? "Falla / pendiente"
-                  : mode === "workshop"
-                    ? "Taller / proveedor"
-                    : "Documento"}
-            </h2>
+            <button
+              type="button"
+              onClick={resetAndClose}
+              className="rounded-full bg-zinc-900 px-3 py-2 text-sm text-zinc-300"
+            >
+              Cerrar
+            </button>
           </div>
 
-          <button
-            onClick={onClose}
-            className="rounded-full bg-zinc-900 px-3 py-2 text-sm text-zinc-300"
-          >
-            Cerrar
-          </button>
-        </div>
-
-        <div className="mb-4 grid grid-cols-4 gap-2 rounded-2xl bg-zinc-900 p-1">
-          {[
-            ["service", "Servicio"],
-            ["issue", "Falla"],
-            ["workshop", "Taller"],
-            ["document", "Doc."],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              onClick={() => setMode(value as AddMode)}
-              className={`rounded-xl px-3 py-2 text-xs font-semibold ${
-                mode === value ? "bg-red-700 text-white" : "text-zinc-400"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+          <div className="mt-4 grid grid-cols-4 gap-2">
+            <ModeButton
+              active={mode === "service"}
+              icon="🧰"
+              label="Serv."
+              onClick={() => setMode("service")}
+            />
+            <ModeButton
+              active={mode === "issue"}
+              icon="⚠️"
+              label="Falla"
+              onClick={() => setMode("issue")}
+            />
+            <ModeButton
+              active={mode === "workshop"}
+              icon="🛠️"
+              label="Taller"
+              onClick={() => setMode("workshop")}
+            />
+            <ModeButton
+              active={mode === "document"}
+              icon="📁"
+              label="Doc"
+              onClick={() => setMode("document")}
+            />
+          </div>
         </div>
 
         {mode === "service" && (
-          <form onSubmit={handleServiceSubmit} className="space-y-3">
+          <form onSubmit={handleSaveService} className="space-y-3">
+            <div className="rounded-3xl border border-red-900/70 bg-red-950/20 p-4">
+              <p className="text-sm font-semibold text-red-300">
+                Servicio / mantenimiento
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Registra servicios, reparaciones, cambio de aceite, frenos,
+                llantas o gastos del vehículo.
+              </p>
+            </div>
+
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Tipo
-              </label>
+              <FieldLabel>Tipo</FieldLabel>
               <select
-                value={type}
-                onChange={(event) => setType(event.target.value as VehicleRecordType)}
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                value={serviceType}
+                onChange={(event) =>
+                  setServiceType(event.target.value as VehicleRecordType)
+                }
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               >
-                {recordTypes.map((recordType) => (
-                  <option key={recordType.value} value={recordType.value}>
-                    {recordType.label}
+                {serviceTypes.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Título
-              </label>
+              <FieldLabel>Título</FieldLabel>
               <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                value={serviceTitle}
+                onChange={(event) => setServiceTitle(event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Fecha
-                </label>
+                <FieldLabel>Fecha</FieldLabel>
                 <input
                   type="date"
-                  value={date}
-                  onChange={(event) => setDate(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                  value={serviceDate}
+                  onChange={(event) => setServiceDate(event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
                 />
               </div>
 
               <div>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Km
-                </label>
+                <FieldLabel>Kilometraje</FieldLabel>
                 <input
-                  value={mileage}
-                  onChange={(event) => setMileage(event.target.value.replace(/[^\d]/g, ""))}
+                  value={serviceMileage}
+                  onChange={(event) =>
+                    setServiceMileage(event.target.value.replace(/[^\d]/g, ""))
+                  }
                   inputMode="numeric"
-                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Costo
-              </label>
+              <FieldLabel>Costo</FieldLabel>
               <input
-                value={cost}
-                onChange={(event) => setCost(event.target.value.replace(/[^\d.]/g, ""))}
+                value={serviceCost}
+                onChange={(event) =>
+                  setServiceCost(event.target.value.replace(/[^\d.]/g, ""))
+                }
                 inputMode="decimal"
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                placeholder="0"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Taller / proveedor
-              </label>
-
+              <FieldLabel>Taller / proveedor</FieldLabel>
               <select
-                value={selectedWorkshopId}
+                value={serviceWorkshopId}
                 onChange={(event) => {
-                  setSelectedWorkshopId(event.target.value);
+                  setServiceWorkshopId(event.target.value);
 
                   if (event.target.value) {
-                    setWorkshopName("");
+                    setServiceWorkshopName("");
                   }
                 }}
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               >
                 <option value="">Texto libre / no registrado</option>
-
                 {workshops.map((workshop) => (
                   <option key={workshop.id} value={workshop.id}>
                     {workshop.name}
@@ -412,39 +491,40 @@ export default function AddActionModal({
                 ))}
               </select>
 
-              {!selectedWorkshopId && (
+              {!serviceWorkshopId && (
                 <input
-                  value={workshopName}
-                  onChange={(event) => setWorkshopName(event.target.value)}
+                  value={serviceWorkshopName}
+                  onChange={(event) => setServiceWorkshopName(event.target.value)}
                   placeholder="Escribe taller o proveedor"
-                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
                 />
               )}
             </div>
 
-            <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Notas
-              </label>
-              <textarea
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                rows={3}
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
-              />
-            </div>
-
-            <label className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+            <label className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
               <input
                 type="checkbox"
-                checked={updateAsLastService}
-                onChange={(event) => setUpdateAsLastService(event.target.checked)}
+                checked={serviceUpdatesLastService}
+                onChange={(event) =>
+                  setServiceUpdatesLastService(event.target.checked)
+                }
                 className="h-5 w-5 accent-red-700"
               />
               <span className="text-sm text-zinc-200">
                 Actualizar como último servicio
               </span>
             </label>
+
+            <div>
+              <FieldLabel>Notas</FieldLabel>
+              <textarea
+                value={serviceNotes}
+                onChange={(event) => setServiceNotes(event.target.value)}
+                rows={3}
+                placeholder="Detalle del servicio..."
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+              />
+            </div>
 
             <button
               type="submit"
@@ -456,75 +536,80 @@ export default function AddActionModal({
         )}
 
         {mode === "issue" && (
-          <form onSubmit={handleIssueSubmit} className="space-y-3">
-            <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+          <form onSubmit={handleSaveIssue} className="space-y-3">
+            <div className="rounded-3xl border border-yellow-900/70 bg-yellow-950/20 p-4">
+              <p className="text-sm font-semibold text-yellow-300">
                 Falla / pendiente
-              </label>
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Registra problemas, reparaciones pendientes o gastos estimados.
+              </p>
+            </div>
+
+            <div>
+              <FieldLabel>Título</FieldLabel>
               <input
                 value={issueTitle}
                 onChange={(event) => setIssueTitle(event.target.value)}
                 placeholder="Ej. Balatas delanteras"
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Prioridad
-                </label>
+                <FieldLabel>Prioridad</FieldLabel>
                 <select
                   value={issuePriority}
-                  onChange={(event) => setIssuePriority(event.target.value as Priority)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                  onChange={(event) =>
+                    setIssuePriority(
+                      event.target.value as VehicleIssue["priority"]
+                    )
+                  }
+                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
                 >
-                  {priorities.map((priority) => (
-                    <option key={priority.value} value={priority.value}>
-                      {priority.label}
+                  {issuePriorities.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Km detectado
-                </label>
+                <FieldLabel>Km detectado</FieldLabel>
                 <input
                   value={issueMileage}
-                  onChange={(event) => setIssueMileage(event.target.value.replace(/[^\d]/g, ""))}
+                  onChange={(event) =>
+                    setIssueMileage(event.target.value.replace(/[^\d]/g, ""))
+                  }
                   inputMode="numeric"
-                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Costo estimado
-              </label>
+              <FieldLabel>Costo estimado</FieldLabel>
               <input
-                value={issueEstimatedCost}
+                value={issueCost}
                 onChange={(event) =>
-                  setIssueEstimatedCost(event.target.value.replace(/[^\d.]/g, ""))
+                  setIssueCost(event.target.value.replace(/[^\d.]/g, ""))
                 }
                 inputMode="decimal"
                 placeholder="Opcional"
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Notas
-              </label>
+              <FieldLabel>Notas</FieldLabel>
               <textarea
                 value={issueNotes}
                 onChange={(event) => setIssueNotes(event.target.value)}
                 rows={3}
-                placeholder="Síntomas, piezas, cotización, taller sugerido..."
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                placeholder="Describe la falla o pendiente..."
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
@@ -538,27 +623,34 @@ export default function AddActionModal({
         )}
 
         {mode === "workshop" && (
-          <form onSubmit={handleWorkshopSubmit} className="space-y-3">
+          <form onSubmit={handleSaveWorkshop} className="space-y-3">
+            <div className="rounded-3xl border border-blue-900/70 bg-blue-950/20 p-4">
+              <p className="text-sm font-semibold text-blue-300">
+                Taller / proveedor
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Registra talleres, llanteras, refaccionarias o proveedores.
+              </p>
+            </div>
+
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Nombre
-              </label>
+              <FieldLabel>Nombre</FieldLabel>
               <input
-                value={workshopNameInput}
-                onChange={(event) => setWorkshopNameInput(event.target.value)}
-                placeholder="Ej. Taller de confianza"
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                value={workshopName}
+                onChange={(event) => setWorkshopName(event.target.value)}
+                placeholder="Ej. Taller Mazda, Llantera..."
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Tipo
-              </label>
+              <FieldLabel>Tipo</FieldLabel>
               <select
                 value={workshopType}
-                onChange={(event) => setWorkshopType(event.target.value as Workshop["type"])}
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                onChange={(event) =>
+                  setWorkshopType(event.target.value as Workshop["type"])
+                }
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               >
                 {workshopTypes.map((item) => (
                   <option key={item.value} value={item.value}>
@@ -569,67 +661,58 @@ export default function AddActionModal({
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Teléfono
-              </label>
+              <FieldLabel>Teléfono</FieldLabel>
               <input
                 value={workshopPhone}
                 onChange={(event) => setWorkshopPhone(event.target.value)}
                 placeholder="Opcional"
-                inputMode="tel"
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Dirección
-              </label>
+              <FieldLabel>Dirección</FieldLabel>
               <input
                 value={workshopAddress}
                 onChange={(event) => setWorkshopAddress(event.target.value)}
                 placeholder="Opcional"
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Calificación
-              </label>
-              <select
+              <FieldLabel>Calificación 1-5</FieldLabel>
+              <input
                 value={workshopRating}
-                onChange={(event) => setWorkshopRating(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
-              >
-                <option value="5">5 - Excelente</option>
-                <option value="4">4 - Bueno</option>
-                <option value="3">3 - Regular</option>
-                <option value="2">2 - Malo</option>
-                <option value="1">1 - No recomendado</option>
-              </select>
+                onChange={(event) =>
+                  setWorkshopRating(event.target.value.replace(/[^\d]/g, ""))
+                }
+                inputMode="numeric"
+                placeholder="Opcional"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+              />
             </div>
 
-            <label className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+            <label className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
               <input
                 type="checkbox"
                 checked={workshopFavorite}
                 onChange={(event) => setWorkshopFavorite(event.target.checked)}
                 className="h-5 w-5 accent-red-700"
               />
-              <span className="text-sm text-zinc-200">Marcar como favorito</span>
+              <span className="text-sm text-zinc-200">
+                Marcar como favorito
+              </span>
             </label>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Notas
-              </label>
+              <FieldLabel>Notas</FieldLabel>
               <textarea
                 value={workshopNotes}
                 onChange={(event) => setWorkshopNotes(event.target.value)}
                 rows={3}
-                placeholder="Especialidad, precios, trato, garantía..."
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                placeholder="Notas del taller..."
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
@@ -643,15 +726,24 @@ export default function AddActionModal({
         )}
 
         {mode === "document" && (
-          <form onSubmit={handleDocumentSubmit} className="space-y-3">
+          <form onSubmit={handleSaveDocument} className="space-y-3">
+            <div className="rounded-3xl border border-blue-900/70 bg-blue-950/20 p-4">
+              <p className="text-sm font-semibold text-blue-300">
+                Documento
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Registra seguro, verificación, tenencia, garantías o tickets.
+              </p>
+            </div>
+
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Tipo
-              </label>
+              <FieldLabel>Tipo</FieldLabel>
               <select
                 value={documentType}
-                onChange={(event) => setDocumentType(event.target.value as VehicleDocumentType)}
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                onChange={(event) =>
+                  setDocumentType(event.target.value as VehicleDocumentType)
+                }
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               >
                 {documentTypes.map((item) => (
                   <option key={item.value} value={item.value}>
@@ -662,27 +754,24 @@ export default function AddActionModal({
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Título
-              </label>
+              <FieldLabel>Título</FieldLabel>
               <input
                 value={documentTitle}
                 onChange={(event) => setDocumentTitle(event.target.value)}
-                placeholder="Ej. Seguro 2026"
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Estado
-              </label>
+              <FieldLabel>Estado</FieldLabel>
               <select
                 value={documentStatus}
                 onChange={(event) =>
-                  setDocumentStatus(event.target.value as VehicleDocumentStatus)
+                  setDocumentStatus(
+                    event.target.value as VehicleDocumentStatus
+                  )
                 }
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               >
                 {documentStatuses.map((item) => (
                   <option key={item.value} value={item.value}>
@@ -694,34 +783,30 @@ export default function AddActionModal({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Emisión / pago
-                </label>
+                <FieldLabel>Emisión / pago</FieldLabel>
                 <input
                   type="date"
                   value={documentIssueDate}
                   onChange={(event) => setDocumentIssueDate(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
                 />
               </div>
 
               <div>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Vence / límite
-                </label>
+                <FieldLabel>Vence / límite</FieldLabel>
                 <input
                   type="date"
                   value={documentExpirationDate}
-                  onChange={(event) => setDocumentExpirationDate(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                  onChange={(event) =>
+                    setDocumentExpirationDate(event.target.value)
+                  }
+                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Costo
-              </label>
+              <FieldLabel>Costo</FieldLabel>
               <input
                 value={documentCost}
                 onChange={(event) =>
@@ -729,44 +814,38 @@ export default function AddActionModal({
                 }
                 inputMode="decimal"
                 placeholder="Opcional"
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Proveedor / entidad
-              </label>
+              <FieldLabel>Proveedor / entidad</FieldLabel>
               <input
                 value={documentProvider}
                 onChange={(event) => setDocumentProvider(event.target.value)}
-                placeholder="Ej. El Águila, Gobierno, Verificentro, Taller..."
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                placeholder="Ej. Aseguradora, Gobierno, Taller..."
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Folio / póliza
-              </label>
+              <FieldLabel>Folio / póliza</FieldLabel>
               <input
                 value={documentFolio}
                 onChange={(event) => setDocumentFolio(event.target.value)}
                 placeholder="Opcional"
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Notas
-              </label>
+              <FieldLabel>Notas</FieldLabel>
               <textarea
                 value={documentNotes}
                 onChange={(event) => setDocumentNotes(event.target.value)}
                 rows={3}
                 placeholder="Notas del documento..."
-                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-red-700"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
               />
             </div>
 

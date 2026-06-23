@@ -75,7 +75,10 @@ function App() {
             serviceState={serviceStatus.status}
             vehicle={data.vehicle}
             vehicleStatus={data.vehicleStatus}
+            records={data.records}
+            workshops={data.workshops}
             onUpdateMileage={updateMileage}
+            onSaveMaintenanceService={addVehicleRecord}
           />
         )}
 
