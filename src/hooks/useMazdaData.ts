@@ -48,6 +48,26 @@ function getLastServiceMileageFromRecords(records: VehicleRecord[]) {
   return serviceRecords[0]?.mileage ?? initialVehicleStatus.lastServiceMileage;
 }
 
+function isMazdaControlData(value: unknown): value is MazdaControlData {
+  if (!value || typeof value !== "object") return false;
+
+  const data = value as Partial<MazdaControlData>;
+
+  return Boolean(
+    data.vehicle &&
+      data.vehicleStatus &&
+      data.insurancePolicy &&
+      data.verificationProfile &&
+      Array.isArray(data.emergencyContacts) &&
+      Array.isArray(data.verificationEvents) &&
+      Array.isArray(data.consumables) &&
+      Array.isArray(data.issues) &&
+      Array.isArray(data.workshops) &&
+      Array.isArray(data.documents) &&
+      Array.isArray(data.records)
+  );
+}
+
 export function useMazdaData() {
   const [data, setData] = useState<MazdaControlData>(() => loadMazdaData());
 
@@ -302,43 +322,46 @@ export function useMazdaData() {
   }
 
   function addConsumable(input: NewConsumableInput) {
-  setData((currentData) => {
-    const newConsumable: Consumable = {
-      id: createId("consumable"),
-      vehicleId: currentData.vehicle.id,
-      name: input.name.trim() || "Refacción sin nombre",
-      category: input.category,
-      brand: input.brand?.trim() || undefined,
-      specification: input.specification?.trim() || undefined,
-      notes: input.notes?.trim() || undefined,
-      isFavorite: input.isFavorite ?? false,
-    };
+    setData((currentData) => {
+      const newConsumable: Consumable = {
+        id: createId("consumable"),
+        vehicleId: currentData.vehicle.id,
+        name: input.name.trim() || "Refacción sin nombre",
+        category: input.category,
+        brand: input.brand?.trim() || undefined,
+        specification: input.specification?.trim() || undefined,
+        notes: input.notes?.trim() || undefined,
+        isFavorite: input.isFavorite ?? false,
+      };
 
-    return {
+      return {
+        ...currentData,
+        consumables: [newConsumable, ...currentData.consumables],
+      };
+    });
+  }
+
+  function updateConsumable(
+    consumableId: string,
+    input: NewConsumableInput
+  ) {
+    setData((currentData) => ({
       ...currentData,
-      consumables: [newConsumable, ...currentData.consumables],
-    };
-  });
-}
-
-  function updateConsumable(consumableId: string, input: NewConsumableInput) {
-  setData((currentData) => ({
-    ...currentData,
-    consumables: currentData.consumables.map((consumable) =>
-      consumable.id === consumableId
-        ? {
-            ...consumable,
-            name: input.name.trim() || "Refacción sin nombre",
-            category: input.category,
-            brand: input.brand?.trim() || undefined,
-            specification: input.specification?.trim() || undefined,
-            notes: input.notes?.trim() || undefined,
-            isFavorite: input.isFavorite ?? false,
-          }
-        : consumable
-    ),
-  }));
-}
+      consumables: currentData.consumables.map((consumable) =>
+        consumable.id === consumableId
+          ? {
+              ...consumable,
+              name: input.name.trim() || "Refacción sin nombre",
+              category: input.category,
+              brand: input.brand?.trim() || undefined,
+              specification: input.specification?.trim() || undefined,
+              notes: input.notes?.trim() || undefined,
+              isFavorite: input.isFavorite ?? false,
+            }
+          : consumable
+      ),
+    }));
+  }
 
   function deleteConsumable(consumableId: string) {
     setData((currentData) => ({
@@ -417,11 +440,52 @@ export function useMazdaData() {
   }
 
   function resetData() {
-    setData(resetMazdaData());
+    const nextData = resetMazdaData();
+
+    saveMazdaData(nextData);
+    setData(nextData);
   }
 
   function exportData() {
     exportMazdaData(data);
+  }
+
+  function importData(file: File): Promise<boolean> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        try {
+          const rawContent = String(reader.result ?? "");
+          const parsed = JSON.parse(rawContent) as unknown;
+
+          const candidate =
+            parsed &&
+            typeof parsed === "object" &&
+            "data" in parsed &&
+            isMazdaControlData((parsed as { data?: unknown }).data)
+              ? (parsed as { data: MazdaControlData }).data
+              : parsed;
+
+          if (!isMazdaControlData(candidate)) {
+            resolve(false);
+            return;
+          }
+
+          saveMazdaData(candidate);
+          setData(candidate);
+          resolve(true);
+        } catch {
+          resolve(false);
+        }
+      };
+
+      reader.onerror = () => {
+        resolve(false);
+      };
+
+      reader.readAsText(file);
+    });
   }
 
   return {
@@ -445,5 +509,6 @@ export function useMazdaData() {
     deleteDocument,
     resetData,
     exportData,
+    importData,
   };
 }

@@ -34,6 +34,7 @@ function App() {
     updateDocument,
     deleteDocument,
     exportData,
+    importData,
     resetData,
   } = useMazdaData();
 
@@ -124,6 +125,7 @@ function App() {
             onUpdateDocument={updateDocument}
             onDeleteDocument={deleteDocument}
             onExportData={exportData}
+            onImportData={importData}
             onResetData={resetData}
           />
         )}

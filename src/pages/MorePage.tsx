@@ -1,4 +1,11 @@
-﻿import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+﻿import {
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import Card from "../components/Card";
 import TrafficCirculationPanel from "../components/TrafficCirculationPanel";
 import type {
@@ -38,6 +45,7 @@ type MorePageProps = {
   onUpdateDocument: (documentId: string, input: NewVehicleDocumentInput) => void;
   onDeleteDocument: (documentId: string) => void;
   onExportData: () => void;
+  onImportData: (file: File) => Promise<boolean>;
   onResetData: () => void;
 };
 
@@ -1247,6 +1255,7 @@ export default function MorePage({
   onUpdateDocument,
   onDeleteDocument,
   onExportData,
+  onImportData,
   onResetData,
 }: MorePageProps) {
   const [activePanel, setActivePanel] = useState<MorePanel | null>(null);
@@ -1260,6 +1269,10 @@ export default function MorePage({
   const [editingConsumableId, setEditingConsumableId] = useState<string | null>(
     null
   );
+
+  const backupFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [backupMessage, setBackupMessage] = useState("");
+  const [isImportingBackup, setIsImportingBackup] = useState(false);
 
   const activeIssues = issues.filter(
     (issue) => issue.status !== "resolved" && issue.status !== "dismissed"
@@ -1307,12 +1320,12 @@ export default function MorePage({
         subtitle: "Revisión rápida antes de salir a carretera",
       },
       traffic: {
-  title: "Tránsito y circulación",
-  subtitle: "Morelia, CDMX / EdoMex y accesos oficiales",
-},
+        title: "Tránsito y circulación",
+        subtitle: "Morelia, CDMX / EdoMex y accesos oficiales",
+      },
       backup: {
         title: "Respaldo",
-        subtitle: "Exportar o reiniciar datos locales",
+        subtitle: "Exportar, importar o reiniciar datos locales",
       },
     };
 
@@ -1373,6 +1386,57 @@ export default function MorePage({
       onDeleteWorkshop(workshopId);
       setEditingWorkshopId(null);
     }
+  }
+
+  async function handleImportBackup(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const confirmed = window.confirm(
+      "¿Importar este respaldo? Esto reemplazará los datos actuales de Mazda Control."
+    );
+
+    if (!confirmed) {
+      event.target.value = "";
+      return;
+    }
+
+    setIsImportingBackup(true);
+    setBackupMessage("");
+
+    const imported = await onImportData(file);
+
+    setIsImportingBackup(false);
+    event.target.value = "";
+
+    if (!imported) {
+      setBackupMessage(
+        "No se pudo importar el archivo. Verifica que sea un respaldo válido de Mazda Control."
+      );
+      return;
+    }
+
+    setBackupMessage("Respaldo importado correctamente. Recargando app...");
+
+    window.setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  }
+
+  function handleResetLocalData() {
+    const confirmed = window.confirm(
+      "¿Reiniciar todos los datos locales? Esta acción restaurará la información inicial y reemplazará los datos actuales en este navegador."
+    );
+
+    if (!confirmed) return;
+
+    onResetData();
+    setBackupMessage("Datos reiniciados. Recargando app...");
+
+    window.setTimeout(() => {
+      window.location.reload();
+    }, 500);
   }
 
   function renderConsumableCard(item: Consumable) {
@@ -1787,16 +1851,18 @@ export default function MorePage({
             subtitle="Antes de carretera"
             onClick={() => setActivePanel("trip-checklist")}
           />
-<MenuCard
-  icon="🚦"
-  title="Tránsito y circulación"
-  subtitle="Morelia, CDMX / EdoMex"
-  onClick={() => setActivePanel("traffic")}
-/>
+
+          <MenuCard
+            icon="🚦"
+            title="Tránsito y circulación"
+            subtitle="Morelia, CDMX / EdoMex"
+            onClick={() => setActivePanel("traffic")}
+          />
+
           <MenuCard
             icon="💾"
             title="Respaldo"
-            subtitle="Exportar JSON o reiniciar datos"
+            subtitle="Exportar, importar o reiniciar"
             onClick={() => setActivePanel("backup")}
           />
         </div>
@@ -1975,18 +2041,21 @@ export default function MorePage({
           )}
 
           {activePanel === "trip-checklist" && <TripChecklistPanel />}
-{activePanel === "traffic" && <TrafficCirculationPanel />}
+
+          {activePanel === "traffic" && <TrafficCirculationPanel />}
+
           {activePanel === "backup" && (
             <div className="space-y-3">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4">
                 <p className="font-semibold text-white">Respaldo local</p>
 
                 <p className="mt-1 text-sm text-zinc-500">
-                  Exporta tus datos en JSON para conservar una copia de
-                  seguridad.
+                  Exporta una copia JSON para guardar tus datos fuera del
+                  navegador.
                 </p>
 
                 <button
+                  type="button"
                   onClick={onExportData}
                   className="mt-4 w-full rounded-2xl bg-zinc-800 px-4 py-3 font-semibold text-white"
                 >
@@ -1994,20 +2063,58 @@ export default function MorePage({
                 </button>
               </div>
 
-              <div className="rounded-2xl border border-red-900 bg-red-950/20 p-4">
+              <div className="rounded-3xl border border-blue-900/70 bg-blue-950/20 p-4">
+                <p className="font-semibold text-blue-300">
+                  Importar respaldo
+                </p>
+
+                <p className="mt-1 text-sm text-zinc-500">
+                  Carga un archivo JSON exportado desde Mazda Control. El
+                  respaldo importado reemplazará los datos actuales.
+                </p>
+
+                <input
+                  ref={backupFileInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={handleImportBackup}
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  disabled={isImportingBackup}
+                  onClick={() => backupFileInputRef.current?.click()}
+                  className="mt-4 w-full rounded-2xl bg-blue-700 px-4 py-3 font-semibold text-white disabled:opacity-60"
+                >
+                  {isImportingBackup
+                    ? "Importando..."
+                    : "Importar respaldo JSON"}
+                </button>
+              </div>
+
+              <div className="rounded-3xl border border-red-900 bg-red-950/20 p-4">
                 <p className="font-semibold text-red-300">Zona de riesgo</p>
 
                 <p className="mt-1 text-sm text-zinc-500">
-                  Esto reinicia los datos guardados en este navegador.
+                  Esto restaura la información inicial de la app y reemplaza
+                  los datos locales guardados en este navegador.
                 </p>
 
                 <button
-                  onClick={onResetData}
+                  type="button"
+                  onClick={handleResetLocalData}
                   className="mt-4 w-full rounded-2xl border border-red-900 px-4 py-3 font-semibold text-red-400"
                 >
                   Reiniciar datos locales
                 </button>
               </div>
+
+              {backupMessage && (
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+                  <p className="text-sm text-zinc-300">{backupMessage}</p>
+                </div>
+              )}
             </div>
           )}
         </DetailModal>
