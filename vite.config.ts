@@ -1,13 +1,15 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.png", "icons/192_192.png", "icons/512_512.png"],
+      includeAssets: ["favicon.png", "icons/48_48.png", "icons/192_192.png", "icons/512_512.png"],
       manifest: {
         name: "Mazda Control",
         short_name: "Mazda Control",
@@ -19,6 +21,11 @@ export default defineConfig({
         start_url: "/",
         scope: "/",
         icons: [
+          {
+            src: "/icons/48_48.png",
+            sizes: "48x48",
+            type: "image/png",
+          },
           {
             src: "/icons/192_192.png",
             sizes: "192x192",
@@ -33,7 +40,7 @@ export default defineConfig({
             src: "/icons/512_512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "any",
           },
         ],
       },
