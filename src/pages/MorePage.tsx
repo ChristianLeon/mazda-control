@@ -232,15 +232,15 @@ function getWorkshopTypeLabel(type: Workshop["type"]) {
 
 function getConsumableCategoryLabel(category: Consumable["category"]) {
   const labels: Record<Consumable["category"], string> = {
-    oil: "Aceite",
+    oil: "Aceite / lubricante",
     filter: "Filtro",
-    tires: "Llantas",
-    wipers: "Limpiadores",
+    tires: "Llanta",
+    wipers: "Limpiador",
     battery: "Batería",
-    spark_plugs: "Bujías",
-    fluids: "Fluidos",
-    cleaning: "Limpieza",
-    other: "Otro",
+    spark_plugs: "Bujía",
+    fluids: "Fluido",
+    cleaning: "Limpieza / aditivo",
+    other: "Otra refacción",
   };
 
   return labels[category];
@@ -1135,8 +1135,8 @@ export default function MorePage({
         subtitle: "Editar proveedores y favoritos",
       },
       consumables: {
-        title: "Consumibles",
-        subtitle: "Aceite, llantas, batería, limpiadores y más",
+        title: "Refacciones",
+        subtitle: "Catálogo útil de piezas, fluidos y especificaciones",
       },
       "trip-checklist": {
         title: "Checklist de viaje",
@@ -1520,13 +1520,13 @@ export default function MorePage({
             onClick={() => setActivePanel("workshops")}
           />
 
-          <MenuCard
-            icon="🧴"
-            title="Consumibles"
-            subtitle="Piezas y fluidos"
-            metric={String(consumables.length)}
-            onClick={() => setActivePanel("consumables")}
-          />
+         <MenuCard
+  icon="🔩"
+  title="Refacciones"
+  subtitle="Catálogo del Mazda"
+  metric={String(consumables.length)}
+  onClick={() => setActivePanel("consumables")}
+/>
 
           <MenuCard
             icon="🧳"
@@ -1686,46 +1686,72 @@ export default function MorePage({
           )}
 
           {activePanel === "consumables" && (
-            <div className="space-y-2">
-              {consumables.length === 0 ? (
-                <p className="text-zinc-400">Sin consumibles registrados.</p>
-              ) : (
-                consumables.map((item) => (
-                  <article
-                    key={item.id}
-                    className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-white">{item.name}</p>
+  <div className="space-y-3">
+    <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4">
+      <p className="font-semibold text-white">Catálogo de referencia</p>
 
-                        <p className="mt-1 text-xs text-zinc-500">
-                          {getConsumableCategoryLabel(item.category)}
-                          {item.brand ? ` · ${item.brand}` : ""}
-                        </p>
-                      </div>
+      <p className="mt-1 text-sm text-zinc-500">
+        Usa esta sección para guardar qué piezas, refacciones, fluidos o
+        medidas usa tu Mazda. El historial real de cambios sigue en Historial
+        y Estado.
+      </p>
+    </div>
 
-                      {item.isFavorite && (
-                        <span className="rounded-full border border-yellow-700 bg-yellow-950/30 px-3 py-1 text-xs font-semibold text-yellow-300">
-                          Favorito
-                        </span>
-                      )}
-                    </div>
+    {consumables.length === 0 ? (
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-center">
+        <p className="text-sm text-zinc-400">
+          Sin piezas o refacciones registradas.
+        </p>
 
-                    {item.specification && (
-                      <p className="mt-2 text-sm text-zinc-400">
-                        {item.specification}
-                      </p>
-                    )}
+        <p className="mt-1 text-xs text-zinc-600">
+          Después agregaremos alta, edición y eliminación desde este módulo.
+        </p>
+      </div>
+    ) : (
+      consumables.map((item) => (
+        <article
+          key={item.id}
+          className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-white">{item.name}</p>
 
-                    {item.notes && (
-                      <p className="mt-2 text-sm text-zinc-500">{item.notes}</p>
-                    )}
-                  </article>
-                ))
-              )}
+              <p className="mt-1 text-xs text-zinc-500">
+                {getConsumableCategoryLabel(item.category)}
+                {item.brand ? ` · ${item.brand}` : ""}
+              </p>
+            </div>
+
+            {item.isFavorite && (
+              <span className="shrink-0 rounded-full border border-yellow-700 bg-yellow-950/30 px-3 py-1 text-xs font-semibold text-yellow-300">
+                Favorito
+              </span>
+            )}
+          </div>
+
+          {item.specification && (
+            <div className="mt-3 rounded-2xl bg-zinc-900 p-3">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                Especificación / medida
+              </p>
+
+              <p className="mt-1 text-sm font-semibold text-zinc-200">
+                {item.specification}
+              </p>
             </div>
           )}
+
+          {item.notes && (
+            <p className="mt-3 rounded-2xl bg-zinc-900 p-3 text-sm text-zinc-400">
+              {item.notes}
+            </p>
+          )}
+        </article>
+      ))
+    )}
+  </div>
+)}
 
           {activePanel === "trip-checklist" && <TripChecklistPanel />}
 
