@@ -1,15 +1,10 @@
 ﻿import Card from "../components/Card";
-import type {
-  InsurancePolicy,
-  VehicleDocument,
-  VerificationEvent,
-} from "../types/mazda";
+import type { VehicleDocument, VerificationEvent } from "../types/mazda";
 
 type ServiceState = "ok" | "soon" | "overdue";
 
 type CalendarPageProps = {
   verificationEvents: VerificationEvent[];
-  insurancePolicy: InsurancePolicy;
   documents: VehicleDocument[];
   serviceLabel: string;
   serviceState: ServiceState;
@@ -204,9 +199,12 @@ function getVerificationPeriod(title: string) {
     : "Noviembre - diciembre";
 }
 
+function isCompletedDocument(documentItem: VehicleDocument) {
+  return documentItem.status === "paid" || documentItem.status === "archived";
+}
+
 export default function CalendarPage({
   verificationEvents,
-  insurancePolicy,
   documents,
   serviceLabel,
   serviceState,
@@ -241,17 +239,17 @@ export default function CalendarPage({
           status: event.status,
         }));
 
-  const expiringDocuments = documents
-    .filter((item) => item.expirationDate)
+  const activeExpiringItems = documents
+    .filter((item) => item.expirationDate && !isCompletedDocument(item))
     .sort((a, b) =>
       String(a.expirationDate).localeCompare(String(b.expirationDate))
     );
 
-  const expiredDocuments = expiringDocuments.filter(
+  const expiredItems = activeExpiringItems.filter(
     (item) => item.expirationDate && getDaysUntil(item.expirationDate) < 0
   );
 
-  const nextThirtyDaysDocuments = expiringDocuments.filter((item) => {
+  const nextThirtyDaysItems = activeExpiringItems.filter((item) => {
     if (!item.expirationDate) return false;
 
     const days = getDaysUntil(item.expirationDate);
@@ -259,7 +257,7 @@ export default function CalendarPage({
     return days >= 0 && days <= 30;
   });
 
-  const futureDocuments = expiringDocuments.filter((item) => {
+  const futureItems = activeExpiringItems.filter((item) => {
     if (!item.expirationDate) return false;
 
     return getDaysUntil(item.expirationDate) > 30;
@@ -332,7 +330,7 @@ export default function CalendarPage({
               </p>
 
               <p className="mt-2 text-xl font-bold text-white">
-                {expiredDocuments.length}
+                {expiredItems.length}
               </p>
             </div>
 
@@ -342,7 +340,7 @@ export default function CalendarPage({
               </p>
 
               <p className="mt-2 text-xl font-bold text-white">
-                {nextThirtyDaysDocuments.length}
+                {nextThirtyDaysItems.length}
               </p>
             </div>
 
@@ -352,7 +350,7 @@ export default function CalendarPage({
               </p>
 
               <p className="mt-2 text-xl font-bold text-white">
-                {futureDocuments.length}
+                {futureItems.length}
               </p>
             </div>
           </div>
@@ -400,20 +398,20 @@ export default function CalendarPage({
         )}
       </Card>
 
-      <Card title="Documentos urgentes">
-        {expiredDocuments.length === 0 && nextThirtyDaysDocuments.length === 0 ? (
+      <Card title="Vencimientos urgentes">
+        {expiredItems.length === 0 && nextThirtyDaysItems.length === 0 ? (
           <div className="rounded-2xl border border-emerald-900/70 bg-emerald-950/20 p-4 text-center">
             <p className="font-semibold text-emerald-300">
               Sin vencimientos críticos
             </p>
 
             <p className="mt-1 text-xs text-zinc-500">
-              No hay documentos vencidos o próximos a 30 días.
+              No hay vencimientos críticos o próximos a 30 días.
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {[...expiredDocuments, ...nextThirtyDaysDocuments].map((item) => {
+            {[...expiredItems, ...nextThirtyDaysItems].map((item) => {
               const daysUntil = item.expirationDate
                 ? getDaysUntil(item.expirationDate)
                 : 0;
@@ -479,12 +477,12 @@ export default function CalendarPage({
         )}
       </Card>
 
-      <Card title="Próximos documentos">
-        {futureDocuments.length === 0 ? (
-          <p className="text-zinc-400">Sin documentos futuros.</p>
+      <Card title="Próximos vencimientos">
+        {futureItems.length === 0 ? (
+          <p className="text-zinc-400">Sin vencimientos futuros.</p>
         ) : (
           <div className="space-y-3">
-            {futureDocuments.map((item) => {
+            {futureItems.map((item) => {
               const daysUntil = item.expirationDate
                 ? getDaysUntil(item.expirationDate)
                 : 0;
@@ -527,22 +525,6 @@ export default function CalendarPage({
             })}
           </div>
         )}
-      </Card>
-
-      <Card title="Seguro">
-        <div className="rounded-3xl border border-emerald-900/80 bg-emerald-950/20 p-4 text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">
-            Vigente
-          </p>
-
-          <p className="mt-2 text-lg font-bold text-white">
-            {insurancePolicy.insurer}
-          </p>
-
-          <p className="mt-1 text-sm text-zinc-400">
-            Vence {formatDate(insurancePolicy.expirationDate)}
-          </p>
-        </div>
       </Card>
     </>
   );

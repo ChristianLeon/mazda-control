@@ -85,7 +85,6 @@ function App() {
         {activeTab === "calendar" && (
           <CalendarPage
             verificationEvents={data.verificationEvents}
-            insurancePolicy={data.insurancePolicy}
             documents={data.documents}
             serviceLabel={serviceStatus.label}
             serviceState={serviceStatus.status}

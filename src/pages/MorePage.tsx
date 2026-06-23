@@ -43,6 +43,7 @@ type MorePanel =
   | "documents"
   | "workshops"
   | "consumables"
+  | "trip-checklist"
   | "backup";
 
 const issuePriorities: { value: VehicleIssue["priority"]; label: string }[] = [
@@ -91,6 +92,105 @@ const workshopTypes: { value: Workshop["type"]; label: string }[] = [
   { value: "other", label: "Otro" },
 ];
 
+type TripChecklistItem = {
+  id: string;
+  label: string;
+  detail: string;
+};
+
+type TripChecklistGroup = {
+  title: string;
+  icon: string;
+  items: TripChecklistItem[];
+};
+
+const tripChecklistGroups: TripChecklistGroup[] = [
+  {
+    title: "Motor y fluidos",
+    icon: "⚙️",
+    items: [
+      {
+        id: "oil",
+        label: "Aceite de motor",
+        detail: "Revisar nivel y que no haya fugas visibles.",
+      },
+      {
+        id: "coolant",
+        label: "Anticongelante",
+        detail: "Revisar nivel, color y fugas.",
+      },
+      {
+        id: "brake-fluid",
+        label: "Líquido de frenos",
+        detail: "Revisar nivel antes de carretera.",
+      },
+      {
+        id: "washer-fluid",
+        label: "Líquido limpiaparabrisas",
+        detail: "Rellenar antes de salir.",
+      },
+    ],
+  },
+  {
+    title: "Llantas",
+    icon: "🛞",
+    items: [
+      {
+        id: "tire-pressure",
+        label: "Presión 40 PSI",
+        detail: "Verificar en frío antes de salir.",
+      },
+      {
+        id: "tire-wear",
+        label: "Desgaste visible",
+        detail: "Revisar desgaste irregular, grietas, chipotes o cortes.",
+      },
+      {
+        id: "tools",
+        label: "Herramienta / gato / birlos",
+        detail: "Confirmar que estén completos y accesibles.",
+      },
+    ],
+  },
+  {
+    title: "Seguridad",
+    icon: "🛡️",
+    items: [
+      {
+        id: "lights",
+        label: "Luces",
+        detail: "Altas, bajas, freno, direccionales e intermitentes.",
+      },
+      {
+        id: "wipers",
+        label: "Limpiadores",
+        detail: "Que limpien parejo y no brinquen.",
+      },
+    ],
+  },
+  {
+    title: "Cabina y viaje",
+    icon: "🎒",
+    items: [
+      {
+        id: "charger",
+        label: "Cargador",
+        detail: "Celular con batería o cargador disponible.",
+      },
+      {
+        id: "cash",
+        label: "Efectivo / tarjeta",
+        detail: "Útil para casetas, estacionamientos o emergencias.",
+      },
+      {
+        id: "tag",
+        label: "TAG",
+        detail: "Confirmar que esté disponible y con saldo para casetas.",
+      },
+    ],
+  },
+];
+
 function formatMoney(value: number) {
   return value.toLocaleString("es-MX", {
     style: "currency",
@@ -109,7 +209,9 @@ function formatDate(value?: string) {
 }
 
 function getPriorityLabel(priority: VehicleIssue["priority"]) {
-  return issuePriorities.find((item) => item.value === priority)?.label ?? priority;
+  return (
+    issuePriorities.find((item) => item.value === priority)?.label ?? priority
+  );
 }
 
 function getStatusLabel(status: VehicleIssue["status"]) {
@@ -128,28 +230,74 @@ function getWorkshopTypeLabel(type: Workshop["type"]) {
   return workshopTypes.find((item) => item.value === type)?.label ?? "Taller";
 }
 
+function getConsumableCategoryLabel(category: Consumable["category"]) {
+  const labels: Record<Consumable["category"], string> = {
+    oil: "Aceite",
+    filter: "Filtro",
+    tires: "Llantas",
+    wipers: "Limpiadores",
+    battery: "Batería",
+    spark_plugs: "Bujías",
+    fluids: "Fluidos",
+    cleaning: "Limpieza",
+    other: "Otro",
+  };
+
+  return labels[category];
+}
+
 function getPriorityClasses(priority: VehicleIssue["priority"]) {
-  if (priority === "urgent") return "border-red-700 bg-red-950/40 text-red-300";
-  if (priority === "high") return "border-orange-700 bg-orange-950/40 text-orange-300";
-  if (priority === "medium") return "border-yellow-700 bg-yellow-950/30 text-yellow-300";
+  if (priority === "urgent") {
+    return "border-red-700 bg-red-950/40 text-red-300";
+  }
+
+  if (priority === "high") {
+    return "border-orange-700 bg-orange-950/40 text-orange-300";
+  }
+
+  if (priority === "medium") {
+    return "border-yellow-700 bg-yellow-950/30 text-yellow-300";
+  }
 
   return "border-zinc-700 bg-zinc-950 text-zinc-300";
 }
 
 function getStatusClasses(status: VehicleIssue["status"]) {
-  if (status === "resolved") return "border-emerald-700 bg-emerald-950/30 text-emerald-300";
-  if (status === "scheduled") return "border-blue-700 bg-blue-950/30 text-blue-300";
-  if (status === "quoted") return "border-yellow-700 bg-yellow-950/30 text-yellow-300";
-  if (status === "dismissed") return "border-zinc-700 bg-zinc-950 text-zinc-400";
+  if (status === "resolved") {
+    return "border-emerald-700 bg-emerald-950/30 text-emerald-300";
+  }
+
+  if (status === "scheduled") {
+    return "border-blue-700 bg-blue-950/30 text-blue-300";
+  }
+
+  if (status === "quoted") {
+    return "border-yellow-700 bg-yellow-950/30 text-yellow-300";
+  }
+
+  if (status === "dismissed") {
+    return "border-zinc-700 bg-zinc-950 text-zinc-400";
+  }
 
   return "border-red-900 bg-red-950/30 text-red-300";
 }
 
 function getDocumentStatusClasses(status: VehicleDocument["status"]) {
-  if (status === "valid") return "border-emerald-700 bg-emerald-950/30 text-emerald-300";
-  if (status === "pending") return "border-yellow-700 bg-yellow-950/30 text-yellow-300";
-  if (status === "expired") return "border-red-700 bg-red-950/40 text-red-300";
-  if (status === "paid") return "border-blue-700 bg-blue-950/30 text-blue-300";
+  if (status === "valid") {
+    return "border-emerald-700 bg-emerald-950/30 text-emerald-300";
+  }
+
+  if (status === "pending") {
+    return "border-yellow-700 bg-yellow-950/30 text-yellow-300";
+  }
+
+  if (status === "expired") {
+    return "border-red-700 bg-red-950/40 text-red-300";
+  }
+
+  if (status === "paid") {
+    return "border-blue-700 bg-blue-950/30 text-blue-300";
+  }
 
   return "border-zinc-700 bg-zinc-950 text-zinc-400";
 }
@@ -226,7 +374,9 @@ function DetailModal({
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red-500">
                 Más
               </p>
+
               <h2 className="mt-1 text-xl font-bold text-white">{title}</h2>
+
               <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
             </div>
 
@@ -245,6 +395,134 @@ function DetailModal({
   );
 }
 
+function TripChecklistPanel() {
+  const [checkedItems, setCheckedItems] = useState<string[]>([]);
+
+  const totalItems = tripChecklistGroups.reduce(
+    (total, group) => total + group.items.length,
+    0
+  );
+
+  function toggleItem(itemId: string) {
+    setCheckedItems((currentItems) =>
+      currentItems.includes(itemId)
+        ? currentItems.filter((item) => item !== itemId)
+        : [...currentItems, itemId]
+    );
+  }
+
+  function clearChecklist() {
+    setCheckedItems([]);
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-3xl border border-red-900/70 bg-red-950/20 p-4">
+        <p className="text-sm font-semibold text-red-300">
+          Checklist antes de salir
+        </p>
+
+        <p className="mt-1 text-xs text-zinc-500">
+          Revisión rápida para carretera o trayectos largos. No sustituye una
+          inspección mecánica.
+        </p>
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <span className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-semibold text-zinc-300">
+            {checkedItems.length}/{totalItems} completado(s)
+          </span>
+
+          <button
+            type="button"
+            onClick={clearChecklist}
+            className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs font-semibold text-zinc-300"
+          >
+            Reiniciar
+          </button>
+        </div>
+      </div>
+
+      {tripChecklistGroups.map((group) => {
+        const completed = group.items.filter((item) =>
+          checkedItems.includes(item.id)
+        ).length;
+
+        return (
+          <section
+            key={group.title}
+            className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-xl">
+                  {group.icon}
+                </div>
+
+                <div className="min-w-0">
+                  <p className="font-semibold text-white">{group.title}</p>
+
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {completed}/{group.items.length} revisado(s)
+                  </p>
+                </div>
+              </div>
+
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                  completed === group.items.length
+                    ? "border-emerald-700 bg-emerald-950/40 text-emerald-300"
+                    : "border-yellow-700 bg-yellow-950/40 text-yellow-300"
+                }`}
+              >
+                {completed === group.items.length ? "Listo" : "Pendiente"}
+              </span>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {group.items.map((item) => {
+                const checked = checkedItems.includes(item.id);
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => toggleItem(item.id)}
+                    className={`w-full rounded-2xl border p-3 text-left ${
+                      checked
+                        ? "border-emerald-900/70 bg-emerald-950/20"
+                        : "border-zinc-800 bg-zinc-900"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${
+                          checked
+                            ? "border-emerald-600 bg-emerald-700 text-white"
+                            : "border-zinc-700 text-zinc-500"
+                        }`}
+                      >
+                        {checked ? "✓" : ""}
+                      </div>
+
+                      <div>
+                        <p className="font-semibold text-white">{item.label}</p>
+
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {item.detail}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 function IssueEditForm({
   issue,
   onCancel,
@@ -255,9 +533,13 @@ function IssueEditForm({
   onSave: (issueId: string, input: UpdateVehicleIssueInput) => void;
 }) {
   const [title, setTitle] = useState(issue.title);
-  const [priority, setPriority] = useState<VehicleIssue["priority"]>(issue.priority);
+  const [priority, setPriority] = useState<VehicleIssue["priority"]>(
+    issue.priority
+  );
   const [status, setStatus] = useState<VehicleIssue["status"]>(issue.status);
-  const [detectedMileage, setDetectedMileage] = useState(String(issue.detectedMileage));
+  const [detectedMileage, setDetectedMileage] = useState(
+    String(issue.detectedMileage)
+  );
   const [estimatedCost, setEstimatedCost] = useState(
     issue.estimatedCost === undefined ? "" : String(issue.estimatedCost)
   );
@@ -277,57 +559,135 @@ function IssueEditForm({
       priority,
       status,
       detectedMileage: cleanMileage,
-      estimatedCost: Number.isFinite(cleanCost) && cleanCost > 0 ? cleanCost : undefined,
+      estimatedCost:
+        Number.isFinite(cleanCost) && cleanCost > 0 ? cleanCost : undefined,
       notes,
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-3xl border border-red-900/70 bg-zinc-900 p-4">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-3xl border border-red-900/70 bg-zinc-900 p-4"
+    >
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-400">
         Editando falla
       </p>
 
       <div className="mt-4 space-y-3">
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Título</label>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Título
+          </label>
+
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Prioridad</label>
-            <select value={priority} onChange={(event) => setPriority(event.target.value as VehicleIssue["priority"])} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700">
-              {issuePriorities.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Prioridad
+            </label>
+
+            <select
+              value={priority}
+              onChange={(event) =>
+                setPriority(event.target.value as VehicleIssue["priority"])
+              }
+              className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+            >
+              {issuePriorities.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
             </select>
           </div>
 
           <div>
-            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Estado</label>
-            <select value={status} onChange={(event) => setStatus(event.target.value as VehicleIssue["status"])} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700">
-              {issueStatuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Estado
+            </label>
+
+            <select
+              value={status}
+              onChange={(event) =>
+                setStatus(event.target.value as VehicleIssue["status"])
+              }
+              className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+            >
+              {issueStatuses.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Km detectado</label>
-          <input value={detectedMileage} onChange={(event) => setDetectedMileage(event.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Km detectado
+          </label>
+
+          <input
+            value={detectedMileage}
+            onChange={(event) =>
+              setDetectedMileage(event.target.value.replace(/[^\d]/g, ""))
+            }
+            inputMode="numeric"
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Costo estimado</label>
-          <input value={estimatedCost} onChange={(event) => setEstimatedCost(event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" placeholder="Opcional" className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Costo estimado
+          </label>
+
+          <input
+            value={estimatedCost}
+            onChange={(event) =>
+              setEstimatedCost(event.target.value.replace(/[^\d.]/g, ""))
+            }
+            inputMode="decimal"
+            placeholder="Opcional"
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Notas</label>
-          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Notas
+          </label>
+
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            rows={3}
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={onCancel} className="rounded-2xl border border-zinc-700 px-4 py-3 font-semibold text-zinc-300">Cancelar</button>
-          <button type="submit" className="rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white">Guardar</button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-2xl border border-zinc-700 px-4 py-3 font-semibold text-zinc-300"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            className="rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white"
+          >
+            Guardar
+          </button>
         </div>
       </div>
     </form>
@@ -345,10 +705,16 @@ function DocumentEditForm({
 }) {
   const [type, setType] = useState<VehicleDocumentType>(documentItem.type);
   const [title, setTitle] = useState(documentItem.title);
-  const [status, setStatus] = useState<VehicleDocumentStatus>(documentItem.status);
+  const [status, setStatus] = useState<VehicleDocumentStatus>(
+    documentItem.status
+  );
   const [issueDate, setIssueDate] = useState(documentItem.issueDate ?? "");
-  const [expirationDate, setExpirationDate] = useState(documentItem.expirationDate ?? "");
-  const [cost, setCost] = useState(documentItem.cost === undefined ? "" : String(documentItem.cost));
+  const [expirationDate, setExpirationDate] = useState(
+    documentItem.expirationDate ?? ""
+  );
+  const [cost, setCost] = useState(
+    documentItem.cost === undefined ? "" : String(documentItem.cost)
+  );
   const [provider, setProvider] = useState(documentItem.provider ?? "");
   const [folio, setFolio] = useState(documentItem.folio ?? "");
   const [notes, setNotes] = useState(documentItem.notes ?? "");
@@ -374,66 +740,166 @@ function DocumentEditForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-3xl border border-red-900/70 bg-zinc-900 p-4">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-3xl border border-red-900/70 bg-zinc-900 p-4"
+    >
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-400">
         Editando documento
       </p>
 
       <div className="mt-4 space-y-3">
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Tipo</label>
-          <select value={type} onChange={(event) => setType(event.target.value as VehicleDocumentType)} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700">
-            {documentTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Tipo
+          </label>
+
+          <select
+            value={type}
+            onChange={(event) =>
+              setType(event.target.value as VehicleDocumentType)
+            }
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          >
+            {documentTypes.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
           </select>
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Título</label>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Título
+          </label>
+
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Estado</label>
-          <select value={status} onChange={(event) => setStatus(event.target.value as VehicleDocumentStatus)} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700">
-            {documentStatuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Estado
+          </label>
+
+          <select
+            value={status}
+            onChange={(event) =>
+              setStatus(event.target.value as VehicleDocumentStatus)
+            }
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          >
+            {documentStatuses.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
           </select>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Emisión / pago</label>
-            <input type="date" value={issueDate} onChange={(event) => setIssueDate(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Emisión / pago
+            </label>
+
+            <input
+              type="date"
+              value={issueDate}
+              onChange={(event) => setIssueDate(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+            />
           </div>
 
           <div>
-            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Vence / límite</label>
-            <input type="date" value={expirationDate} onChange={(event) => setExpirationDate(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Vence / límite
+            </label>
+
+            <input
+              type="date"
+              value={expirationDate}
+              onChange={(event) => setExpirationDate(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+            />
           </div>
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Costo</label>
-          <input value={cost} onChange={(event) => setCost(event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" placeholder="Opcional" className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Costo
+          </label>
+
+          <input
+            value={cost}
+            onChange={(event) =>
+              setCost(event.target.value.replace(/[^\d.]/g, ""))
+            }
+            inputMode="decimal"
+            placeholder="Opcional"
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Proveedor / entidad</label>
-          <input value={provider} onChange={(event) => setProvider(event.target.value)} placeholder="Ej. El Águila, Gobierno, Verificentro, Taller..." className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Proveedor / entidad
+          </label>
+
+          <input
+            value={provider}
+            onChange={(event) => setProvider(event.target.value)}
+            placeholder="Ej. El Águila, Gobierno, Verificentro, Taller..."
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Folio / póliza</label>
-          <input value={folio} onChange={(event) => setFolio(event.target.value)} placeholder="Opcional" className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Folio / póliza
+          </label>
+
+          <input
+            value={folio}
+            onChange={(event) => setFolio(event.target.value)}
+            placeholder="Opcional"
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Notas</label>
-          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} placeholder="Notas del documento..." className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Notas
+          </label>
+
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            rows={3}
+            placeholder="Notas del documento..."
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={onCancel} className="rounded-2xl border border-zinc-700 px-4 py-3 font-semibold text-zinc-300">Cancelar</button>
-          <button type="submit" className="rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white">Guardar</button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-2xl border border-zinc-700 px-4 py-3 font-semibold text-zinc-300"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            className="rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white"
+          >
+            Guardar
+          </button>
         </div>
       </div>
     </form>
@@ -454,7 +920,9 @@ function WorkshopEditForm({
   const [phone, setPhone] = useState(workshop.phone ?? "");
   const [address, setAddress] = useState(workshop.address ?? "");
   const [notes, setNotes] = useState(workshop.notes ?? "");
-  const [rating, setRating] = useState(workshop.rating === undefined ? "" : String(workshop.rating));
+  const [rating, setRating] = useState(
+    workshop.rating === undefined ? "" : String(workshop.rating)
+  );
   const [isFavorite, setIsFavorite] = useState(Boolean(workshop.isFavorite));
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -470,58 +938,133 @@ function WorkshopEditForm({
       phone,
       address,
       notes,
-      rating: Number.isFinite(cleanRating) && cleanRating > 0 ? Math.min(cleanRating, 5) : undefined,
+      rating:
+        Number.isFinite(cleanRating) && cleanRating > 0
+          ? Math.min(cleanRating, 5)
+          : undefined,
       isFavorite,
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-3xl border border-red-900/70 bg-zinc-900 p-4">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-3xl border border-red-900/70 bg-zinc-900 p-4"
+    >
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-400">
         Editando taller
       </p>
 
       <div className="mt-4 space-y-3">
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Nombre</label>
-          <input value={name} onChange={(event) => setName(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Nombre
+          </label>
+
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Tipo</label>
-          <select value={type} onChange={(event) => setType(event.target.value as Workshop["type"])} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700">
-            {workshopTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Tipo
+          </label>
+
+          <select
+            value={type}
+            onChange={(event) => setType(event.target.value as Workshop["type"])}
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          >
+            {workshopTypes.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
           </select>
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Teléfono</label>
-          <input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Teléfono
+          </label>
+
+          <input
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Dirección</label>
-          <input value={address} onChange={(event) => setAddress(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Dirección
+          </label>
+
+          <input
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Calificación 1-5</label>
-          <input value={rating} onChange={(event) => setRating(event.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Opcional" className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Calificación 1-5
+          </label>
+
+          <input
+            value={rating}
+            onChange={(event) =>
+              setRating(event.target.value.replace(/[^\d]/g, ""))
+            }
+            inputMode="numeric"
+            placeholder="Opcional"
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <label className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-          <input type="checkbox" checked={isFavorite} onChange={(event) => setIsFavorite(event.target.checked)} className="h-5 w-5 accent-red-700" />
+          <input
+            type="checkbox"
+            checked={isFavorite}
+            onChange={(event) => setIsFavorite(event.target.checked)}
+            className="h-5 w-5 accent-red-700"
+          />
+
           <span className="text-sm text-zinc-200">Marcar como favorito</span>
         </label>
 
         <div>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">Notas</label>
-          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700" />
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Notas
+          </label>
+
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            rows={3}
+            className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={onCancel} className="rounded-2xl border border-zinc-700 px-4 py-3 font-semibold text-zinc-300">Cancelar</button>
-          <button type="submit" className="rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white">Guardar</button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-2xl border border-zinc-700 px-4 py-3 font-semibold text-zinc-300"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            className="rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white"
+          >
+            Guardar
+          </button>
         </div>
       </div>
     </form>
@@ -547,14 +1090,29 @@ export default function MorePage({
 }: MorePageProps) {
   const [activePanel, setActivePanel] = useState<MorePanel | null>(null);
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
-  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
-  const [editingWorkshopId, setEditingWorkshopId] = useState<string | null>(null);
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(
+    null
+  );
+  const [editingWorkshopId, setEditingWorkshopId] = useState<string | null>(
+    null
+  );
 
-  const activeIssues = issues.filter((issue) => issue.status !== "resolved" && issue.status !== "dismissed");
-  const closedIssues = issues.filter((issue) => issue.status === "resolved" || issue.status === "dismissed");
+  const activeIssues = issues.filter(
+    (issue) => issue.status !== "resolved" && issue.status !== "dismissed"
+  );
+
+  const closedIssues = issues.filter(
+    (issue) => issue.status === "resolved" || issue.status === "dismissed"
+  );
 
   const costAnalysis = useMemo(
-    () => calculateCostAnalysis({ vehicle, records, documents, issues }),
+    () =>
+      calculateCostAnalysis({
+        vehicle,
+        records,
+        documents,
+        issues,
+      }),
     [vehicle, records, documents, issues]
   );
 
@@ -579,6 +1137,10 @@ export default function MorePage({
       consumables: {
         title: "Consumibles",
         subtitle: "Aceite, llantas, batería, limpiadores y más",
+      },
+      "trip-checklist": {
+        title: "Checklist de viaje",
+        subtitle: "Revisión rápida antes de salir a carretera",
       },
       backup: {
         title: "Respaldo",
@@ -633,46 +1195,107 @@ export default function MorePage({
 
   function renderIssueCard(issue: VehicleIssue) {
     if (editingIssueId === issue.id) {
-      return <IssueEditForm key={issue.id} issue={issue} onCancel={() => setEditingIssueId(null)} onSave={saveIssue} />;
+      return (
+        <IssueEditForm
+          key={issue.id}
+          issue={issue}
+          onCancel={() => setEditingIssueId(null)}
+          onSave={saveIssue}
+        />
+      );
     }
 
     return (
-      <article key={issue.id} className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4">
+      <article
+        key={issue.id}
+        className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate font-semibold text-white">{issue.title}</p>
-            <p className="mt-1 text-xs text-zinc-500">Detectado: {issue.detectedMileage.toLocaleString("es-MX")} km</p>
+
+            <p className="mt-1 text-xs text-zinc-500">
+              Detectado: {issue.detectedMileage.toLocaleString("es-MX")} km
+            </p>
           </div>
 
           <div className="flex shrink-0 flex-col items-end gap-2">
-            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getPriorityClasses(issue.priority)}`}>
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${getPriorityClasses(
+                issue.priority
+              )}`}
+            >
               {getPriorityLabel(issue.priority)}
             </span>
 
-            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(issue.status)}`}>
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                issue.status
+              )}`}
+            >
               {getStatusLabel(issue.status)}
             </span>
           </div>
         </div>
 
         {issue.estimatedCost !== undefined && (
-          <p className="mt-3 text-sm text-zinc-400">Costo estimado: {formatMoney(issue.estimatedCost)}</p>
+          <p className="mt-3 text-sm text-zinc-400">
+            Costo estimado: {formatMoney(issue.estimatedCost)}
+          </p>
         )}
 
-        {issue.notes && <p className="mt-2 rounded-2xl bg-zinc-900 p-3 text-sm text-zinc-400">{issue.notes}</p>}
+        {issue.notes && (
+          <p className="mt-2 rounded-2xl bg-zinc-900 p-3 text-sm text-zinc-400">
+            {issue.notes}
+          </p>
+        )}
 
         {issue.status !== "resolved" && issue.status !== "dismissed" && (
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <button onClick={() => onUpdateIssueStatus(issue.id, "quoted")} className="rounded-xl bg-zinc-800 px-3 py-2 text-sm text-zinc-200">Cotizada</button>
-            <button onClick={() => onUpdateIssueStatus(issue.id, "scheduled")} className="rounded-xl bg-blue-950/60 px-3 py-2 text-sm text-blue-200">Programada</button>
-            <button onClick={() => onUpdateIssueStatus(issue.id, "resolved")} className="rounded-xl bg-emerald-950/60 px-3 py-2 text-sm text-emerald-200">Resuelta</button>
-            <button onClick={() => onUpdateIssueStatus(issue.id, "dismissed")} className="rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-400">Descartar</button>
+            <button
+              onClick={() => onUpdateIssueStatus(issue.id, "quoted")}
+              className="rounded-xl bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
+            >
+              Cotizada
+            </button>
+
+            <button
+              onClick={() => onUpdateIssueStatus(issue.id, "scheduled")}
+              className="rounded-xl bg-blue-950/60 px-3 py-2 text-sm text-blue-200"
+            >
+              Programada
+            </button>
+
+            <button
+              onClick={() => onUpdateIssueStatus(issue.id, "resolved")}
+              className="rounded-xl bg-emerald-950/60 px-3 py-2 text-sm text-emerald-200"
+            >
+              Resuelta
+            </button>
+
+            <button
+              onClick={() => onUpdateIssueStatus(issue.id, "dismissed")}
+              className="rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-400"
+            >
+              Descartar
+            </button>
           </div>
         )}
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button onClick={() => setEditingIssueId(issue.id)} className="rounded-2xl bg-red-700 px-3 py-3 text-sm font-semibold text-white">Editar falla</button>
-          <button onClick={() => deleteIssue(issue.id)} className="rounded-2xl border border-red-900 px-3 py-3 text-sm font-semibold text-red-400">Eliminar</button>
+          <button
+            onClick={() => setEditingIssueId(issue.id)}
+            className="rounded-2xl bg-red-700 px-3 py-3 text-sm font-semibold text-white"
+          >
+            Editar falla
+          </button>
+
+          <button
+            onClick={() => deleteIssue(issue.id)}
+            className="rounded-2xl border border-red-900 px-3 py-3 text-sm font-semibold text-red-400"
+          >
+            Eliminar
+          </button>
         </div>
       </article>
     );
@@ -680,47 +1303,110 @@ export default function MorePage({
 
   function renderDocumentCard(documentItem: VehicleDocument) {
     if (editingDocumentId === documentItem.id) {
-      return <DocumentEditForm key={documentItem.id} documentItem={documentItem} onCancel={() => setEditingDocumentId(null)} onSave={saveDocument} />;
+      return (
+        <DocumentEditForm
+          key={documentItem.id}
+          documentItem={documentItem}
+          onCancel={() => setEditingDocumentId(null)}
+          onSave={saveDocument}
+        />
+      );
     }
 
     return (
-      <article key={documentItem.id} className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4">
+      <article
+        key={documentItem.id}
+        className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate font-semibold text-white">{documentItem.title}</p>
-            <p className="mt-1 text-xs text-zinc-500">{getDocumentTypeLabel(documentItem.type)}</p>
+            <p className="truncate font-semibold text-white">
+              {documentItem.title}
+            </p>
+
+            <p className="mt-1 text-xs text-zinc-500">
+              {getDocumentTypeLabel(documentItem.type)}
+            </p>
           </div>
 
-          <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${getDocumentStatusClasses(documentItem.status)}`}>
+          <span
+            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${getDocumentStatusClasses(
+              documentItem.status
+            )}`}
+          >
             {getDocumentStatusLabel(documentItem.status)}
           </span>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="rounded-xl bg-zinc-900 p-3">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Emisión / pago</p>
-            <p className="mt-1 text-sm font-semibold text-zinc-200">{formatDate(documentItem.issueDate)}</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+              Emisión / pago
+            </p>
+
+            <p className="mt-1 text-sm font-semibold text-zinc-200">
+              {formatDate(documentItem.issueDate)}
+            </p>
           </div>
 
           <div className="rounded-xl bg-zinc-900 p-3">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Vencimiento</p>
-            <p className="mt-1 text-sm font-semibold text-zinc-200">{formatDate(documentItem.expirationDate)}</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+              Vencimiento
+            </p>
+
+            <p className="mt-1 text-sm font-semibold text-zinc-200">
+              {formatDate(documentItem.expirationDate)}
+            </p>
           </div>
         </div>
 
-        {(documentItem.folio || documentItem.provider || documentItem.cost !== undefined) && (
+        {(documentItem.folio ||
+          documentItem.provider ||
+          documentItem.cost !== undefined) && (
           <div className="mt-3 space-y-1 text-sm text-zinc-400">
-            {documentItem.folio && <p><span className="text-zinc-600">Folio:</span> {documentItem.folio}</p>}
-            {documentItem.provider && <p><span className="text-zinc-600">Proveedor:</span> {documentItem.provider}</p>}
-            {documentItem.cost !== undefined && <p><span className="text-zinc-600">Costo:</span> {formatMoney(documentItem.cost)}</p>}
+            {documentItem.folio && (
+              <p>
+                <span className="text-zinc-600">Folio:</span>{" "}
+                {documentItem.folio}
+              </p>
+            )}
+
+            {documentItem.provider && (
+              <p>
+                <span className="text-zinc-600">Proveedor:</span>{" "}
+                {documentItem.provider}
+              </p>
+            )}
+
+            {documentItem.cost !== undefined && (
+              <p>
+                <span className="text-zinc-600">Costo:</span>{" "}
+                {formatMoney(documentItem.cost)}
+              </p>
+            )}
           </div>
         )}
 
-        {documentItem.notes && <p className="mt-3 rounded-xl bg-zinc-900 p-3 text-sm text-zinc-400">{documentItem.notes}</p>}
+        {documentItem.notes && (
+          <p className="mt-3 rounded-xl bg-zinc-900 p-3 text-sm text-zinc-400">
+            {documentItem.notes}
+          </p>
+        )}
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button onClick={() => setEditingDocumentId(documentItem.id)} className="rounded-2xl bg-red-700 px-3 py-3 text-sm font-semibold text-white">Editar documento</button>
-          <button onClick={() => deleteDocument(documentItem.id)} className="rounded-2xl border border-red-900 px-3 py-3 text-sm font-semibold text-red-400">Eliminar</button>
+          <button
+            onClick={() => setEditingDocumentId(documentItem.id)}
+            className="rounded-2xl bg-red-700 px-3 py-3 text-sm font-semibold text-white"
+          >
+            Editar documento
+          </button>
+
+          <button
+            onClick={() => deleteDocument(documentItem.id)}
+            className="rounded-2xl border border-red-900 px-3 py-3 text-sm font-semibold text-red-400"
+          >
+            Eliminar
+          </button>
         </div>
       </article>
     );
@@ -728,18 +1414,31 @@ export default function MorePage({
 
   function renderWorkshopCard(workshop: Workshop) {
     if (editingWorkshopId === workshop.id) {
-      return <WorkshopEditForm key={workshop.id} workshop={workshop} onCancel={() => setEditingWorkshopId(null)} onSave={saveWorkshop} />;
+      return (
+        <WorkshopEditForm
+          key={workshop.id}
+          workshop={workshop}
+          onCancel={() => setEditingWorkshopId(null)}
+          onSave={saveWorkshop}
+        />
+      );
     }
 
     return (
-      <article key={workshop.id} className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4">
+      <article
+        key={workshop.id}
+        className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate font-semibold text-white">
               {workshop.name}
               {workshop.isFavorite ? " ★" : ""}
             </p>
-            <p className="mt-1 text-xs text-zinc-500">{getWorkshopTypeLabel(workshop.type)}</p>
+
+            <p className="mt-1 text-xs text-zinc-500">
+              {getWorkshopTypeLabel(workshop.type)}
+            </p>
           </div>
 
           {workshop.rating && (
@@ -749,13 +1448,34 @@ export default function MorePage({
           )}
         </div>
 
-        {workshop.phone && <p className="mt-3 text-sm text-zinc-400">Tel: {workshop.phone}</p>}
-        {workshop.address && <p className="mt-1 text-sm text-zinc-400">{workshop.address}</p>}
-        {workshop.notes && <p className="mt-3 rounded-xl bg-zinc-900 p-3 text-sm text-zinc-400">{workshop.notes}</p>}
+        {workshop.phone && (
+          <p className="mt-3 text-sm text-zinc-400">Tel: {workshop.phone}</p>
+        )}
+
+        {workshop.address && (
+          <p className="mt-1 text-sm text-zinc-400">{workshop.address}</p>
+        )}
+
+        {workshop.notes && (
+          <p className="mt-3 rounded-xl bg-zinc-900 p-3 text-sm text-zinc-400">
+            {workshop.notes}
+          </p>
+        )}
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button onClick={() => setEditingWorkshopId(workshop.id)} className="rounded-2xl bg-red-700 px-3 py-3 text-sm font-semibold text-white">Editar taller</button>
-          <button onClick={() => deleteWorkshop(workshop.id)} className="rounded-2xl border border-red-900 px-3 py-3 text-sm font-semibold text-red-400">Eliminar</button>
+          <button
+            onClick={() => setEditingWorkshopId(workshop.id)}
+            className="rounded-2xl bg-red-700 px-3 py-3 text-sm font-semibold text-white"
+          >
+            Editar taller
+          </button>
+
+          <button
+            onClick={() => deleteWorkshop(workshop.id)}
+            className="rounded-2xl border border-red-900 px-3 py-3 text-sm font-semibold text-red-400"
+          >
+            Eliminar
+          </button>
         </div>
       </article>
     );
@@ -765,16 +1485,62 @@ export default function MorePage({
     <>
       <Card title="Más">
         <div className="space-y-3">
-          <MenuCard icon="📊" title="Análisis de costos" subtitle="Gasto real, pendiente y top gastos" metric={formatMoney(costAnalysis.totalKnownCost)} tone="red" onClick={() => setActivePanel("costs")} />
+          <MenuCard
+            icon="📊"
+            title="Análisis de costos"
+            subtitle="Gasto real, pendiente y top gastos"
+            metric={formatMoney(costAnalysis.totalKnownCost)}
+            tone="red"
+            onClick={() => setActivePanel("costs")}
+          />
 
-          <div className="grid grid-cols-2 gap-3">
-            <MenuCard icon="⚠️" title="Fallas" subtitle="Activas y cerradas" metric={String(activeIssues.length)} tone={activeIssues.length > 0 ? "yellow" : "green"} onClick={() => setActivePanel("issues")} />
-            <MenuCard icon="📁" title="Docs" subtitle="Vigencias" metric={String(documents.length)} tone="blue" onClick={() => setActivePanel("documents")} />
-            <MenuCard icon="🛠️" title="Talleres" subtitle="Proveedores" metric={String(workshops.length)} onClick={() => setActivePanel("workshops")} />
-            <MenuCard icon="🧴" title="Consumibles" subtitle="Piezas y fluidos" metric={String(consumables.length)} onClick={() => setActivePanel("consumables")} />
-          </div>
+          <MenuCard
+            icon="⚠️"
+            title="Fallas"
+            subtitle="Activas y cerradas"
+            metric={String(activeIssues.length)}
+            tone={activeIssues.length > 0 ? "yellow" : "green"}
+            onClick={() => setActivePanel("issues")}
+          />
 
-          <MenuCard icon="💾" title="Respaldo" subtitle="Exportar JSON o reiniciar datos" onClick={() => setActivePanel("backup")} />
+          <MenuCard
+            icon="📁"
+            title="Docs"
+            subtitle="Vigencias"
+            metric={String(documents.length)}
+            tone="blue"
+            onClick={() => setActivePanel("documents")}
+          />
+
+          <MenuCard
+            icon="🛠️"
+            title="Talleres"
+            subtitle="Proveedores"
+            metric={String(workshops.length)}
+            onClick={() => setActivePanel("workshops")}
+          />
+
+          <MenuCard
+            icon="🧴"
+            title="Consumibles"
+            subtitle="Piezas y fluidos"
+            metric={String(consumables.length)}
+            onClick={() => setActivePanel("consumables")}
+          />
+
+          <MenuCard
+            icon="🧳"
+            title="Checklist de viaje"
+            subtitle="Antes de carretera"
+            onClick={() => setActivePanel("trip-checklist")}
+          />
+
+          <MenuCard
+            icon="💾"
+            title="Respaldo"
+            subtitle="Exportar JSON o reiniciar datos"
+            onClick={() => setActivePanel("backup")}
+          />
         </div>
       </Card>
 
@@ -792,37 +1558,70 @@ export default function MorePage({
           {activePanel === "costs" && (
             <div className="space-y-3">
               <div className="rounded-3xl border border-red-900/80 bg-red-950/20 p-4 text-center">
-                <p className="text-xs uppercase tracking-[0.2em] text-red-400">Total conocido</p>
-                <p className="mt-2 text-2xl font-bold text-white">{formatMoney(costAnalysis.totalKnownCost)}</p>
-                <p className="mt-1 text-xs text-zinc-500">Gasto real + estimados pendientes</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-red-400">
+                  Total conocido
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-white">
+                  {formatMoney(costAnalysis.totalKnownCost)}
+                </p>
+
+                <p className="mt-1 text-xs text-zinc-500">
+                  Gasto real + estimados pendientes
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-center">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Real gastado</p>
-                  <p className="mt-2 text-lg font-bold text-white">{formatMoney(costAnalysis.realSpentTotal)}</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                    Real gastado
+                  </p>
+
+                  <p className="mt-2 text-lg font-bold text-white">
+                    {formatMoney(costAnalysis.realSpentTotal)}
+                  </p>
                 </div>
 
                 <div className="rounded-2xl border border-yellow-900/70 bg-yellow-950/20 p-4 text-center">
-                  <p className="text-xs uppercase tracking-[0.2em] text-yellow-400">Pendiente est.</p>
-                  <p className="mt-2 text-lg font-bold text-yellow-300">{formatMoney(costAnalysis.openIssueEstimateTotal)}</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-yellow-400">
+                    Pendiente est.
+                  </p>
+
+                  <p className="mt-2 text-lg font-bold text-yellow-300">
+                    {formatMoney(costAnalysis.openIssueEstimateTotal)}
+                  </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Servicios</p>
-                  <p className="mt-1 text-sm font-semibold text-zinc-200">{formatMoney(costAnalysis.serviceTotal)}</p>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    Servicios
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold text-zinc-200">
+                    {formatMoney(costAnalysis.serviceTotal)}
+                  </p>
                 </div>
 
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Docs</p>
-                  <p className="mt-1 text-sm font-semibold text-zinc-200">{formatMoney(costAnalysis.documentTotal)}</p>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    Docs
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold text-zinc-200">
+                    {formatMoney(costAnalysis.documentTotal)}
+                  </p>
                 </div>
 
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">$/km</p>
-                  <p className="mt-1 text-sm font-semibold text-zinc-200">{formatMoney(costAnalysis.costPerCurrentKm)}</p>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    $/km
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold text-zinc-200">
+                    {formatMoney(costAnalysis.costPerCurrentKm)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -832,8 +1631,13 @@ export default function MorePage({
             <div className="space-y-3">
               {activeIssues.length === 0 ? (
                 <div className="rounded-2xl border border-emerald-900/70 bg-emerald-950/20 p-4 text-center">
-                  <p className="font-semibold text-emerald-300">Sin fallas activas</p>
-                  <p className="mt-1 text-xs text-zinc-500">Agrega pendientes desde el botón +</p>
+                  <p className="font-semibold text-emerald-300">
+                    Sin fallas activas
+                  </p>
+
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Agrega pendientes desde el botón +
+                  </p>
                 </div>
               ) : (
                 activeIssues.map((issue) => renderIssueCard(issue))
@@ -841,7 +1645,10 @@ export default function MorePage({
 
               {closedIssues.length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Cerradas</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                    Cerradas
+                  </p>
+
                   {closedIssues.map((issue) => renderIssueCard(issue))}
                 </div>
               )}
@@ -852,8 +1659,13 @@ export default function MorePage({
             <div className="space-y-3">
               {documents.length === 0 ? (
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-center">
-                  <p className="text-sm text-zinc-400">Aún no tienes documentos registrados.</p>
-                  <p className="mt-1 text-xs text-zinc-600">Usa el botón + y selecciona Doc.</p>
+                  <p className="text-sm text-zinc-400">
+                    Aún no tienes documentos registrados.
+                  </p>
+
+                  <p className="mt-1 text-xs text-zinc-600">
+                    Usa el botón + y selecciona Doc.
+                  </p>
                 </div>
               ) : (
                 documents.map((documentItem) => renderDocumentCard(documentItem))
@@ -864,7 +1676,9 @@ export default function MorePage({
           {activePanel === "workshops" && (
             <div className="space-y-3">
               {workshops.length === 0 ? (
-                <p className="text-zinc-400">Aún no tienes talleres registrados.</p>
+                <p className="text-zinc-400">
+                  Aún no tienes talleres registrados.
+                </p>
               ) : (
                 workshops.map((workshop) => renderWorkshopCard(workshop))
               )}
@@ -877,32 +1691,75 @@ export default function MorePage({
                 <p className="text-zinc-400">Sin consumibles registrados.</p>
               ) : (
                 consumables.map((item) => (
-                  <article key={item.id} className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
-                    <p className="font-semibold text-white">{item.name}</p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {item.category}
-                      {item.brand ? ` · ${item.brand}` : ""}
-                    </p>
-                    {item.specification && <p className="mt-2 text-sm text-zinc-400">{item.specification}</p>}
-                    {item.notes && <p className="mt-2 text-sm text-zinc-500">{item.notes}</p>}
+                  <article
+                    key={item.id}
+                    className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-white">{item.name}</p>
+
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {getConsumableCategoryLabel(item.category)}
+                          {item.brand ? ` · ${item.brand}` : ""}
+                        </p>
+                      </div>
+
+                      {item.isFavorite && (
+                        <span className="rounded-full border border-yellow-700 bg-yellow-950/30 px-3 py-1 text-xs font-semibold text-yellow-300">
+                          Favorito
+                        </span>
+                      )}
+                    </div>
+
+                    {item.specification && (
+                      <p className="mt-2 text-sm text-zinc-400">
+                        {item.specification}
+                      </p>
+                    )}
+
+                    {item.notes && (
+                      <p className="mt-2 text-sm text-zinc-500">{item.notes}</p>
+                    )}
                   </article>
                 ))
               )}
             </div>
           )}
 
+          {activePanel === "trip-checklist" && <TripChecklistPanel />}
+
           {activePanel === "backup" && (
             <div className="space-y-3">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
                 <p className="font-semibold text-white">Respaldo local</p>
-                <p className="mt-1 text-sm text-zinc-500">Exporta tus datos en JSON para conservar una copia de seguridad.</p>
-                <button onClick={onExportData} className="mt-4 w-full rounded-2xl bg-zinc-800 px-4 py-3 font-semibold text-white">Exportar respaldo JSON</button>
+
+                <p className="mt-1 text-sm text-zinc-500">
+                  Exporta tus datos en JSON para conservar una copia de
+                  seguridad.
+                </p>
+
+                <button
+                  onClick={onExportData}
+                  className="mt-4 w-full rounded-2xl bg-zinc-800 px-4 py-3 font-semibold text-white"
+                >
+                  Exportar respaldo JSON
+                </button>
               </div>
 
               <div className="rounded-2xl border border-red-900 bg-red-950/20 p-4">
                 <p className="font-semibold text-red-300">Zona de riesgo</p>
-                <p className="mt-1 text-sm text-zinc-500">Esto reinicia los datos guardados en este navegador.</p>
-                <button onClick={onResetData} className="mt-4 w-full rounded-2xl border border-red-900 px-4 py-3 font-semibold text-red-400">Reiniciar datos locales</button>
+
+                <p className="mt-1 text-sm text-zinc-500">
+                  Esto reinicia los datos guardados en este navegador.
+                </p>
+
+                <button
+                  onClick={onResetData}
+                  className="mt-4 w-full rounded-2xl border border-red-900 px-4 py-3 font-semibold text-red-400"
+                >
+                  Reiniciar datos locales
+                </button>
               </div>
             </div>
           )}
