@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.png", "icons/48_48.png", "icons/192_192.png", "icons/512_512.png"],
+      includeAssets: ["favicon.png", "48_48.png", "192_192.png", "512_512.png"],
       manifest: {
         name: "Mazda Control",
         short_name: "Mazda Control",
@@ -22,22 +22,22 @@ export default defineConfig({
         scope: "/",
         icons: [
           {
-            src: "/icons/48_48.png",
+            src: "/48_48.png",
             sizes: "48x48",
             type: "image/png",
           },
           {
-            src: "/icons/192_192.png",
+            src: "/192_192.png",
             sizes: "192x192",
             type: "image/png",
           },
           {
-            src: "/icons/512_512.png",
+            src: "/512_512.png",
             sizes: "512x512",
             type: "image/png",
           },
           {
-            src: "/icons/512_512.png",
+            src: "/512_512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any",
