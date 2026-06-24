@@ -8,6 +8,7 @@
 } from "react";
 import Card from "../components/Card";
 import TrafficCirculationPanel from "../components/TrafficCirculationPanel";
+import CostAnalysisPanel from "../components/CostAnalysisPanel";
 import type {
   Consumable,
   NewConsumableInput,
@@ -1881,76 +1882,8 @@ export default function MorePage({
           }}
         >
           {activePanel === "costs" && (
-            <div className="space-y-3">
-              <div className="rounded-3xl border border-red-900/80 bg-red-950/20 p-4 text-center">
-                <p className="text-xs uppercase tracking-[0.2em] text-red-400">
-                  Total conocido
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-white">
-                  {formatMoney(costAnalysis.totalKnownCost)}
-                </p>
-
-                <p className="mt-1 text-xs text-zinc-500">
-                  Gasto real + estimados pendientes
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-center">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                    Real gastado
-                  </p>
-
-                  <p className="mt-2 text-lg font-bold text-white">
-                    {formatMoney(costAnalysis.realSpentTotal)}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-yellow-900/70 bg-yellow-950/20 p-4 text-center">
-                  <p className="text-xs uppercase tracking-[0.2em] text-yellow-400">
-                    Pendiente est.
-                  </p>
-
-                  <p className="mt-2 text-lg font-bold text-yellow-300">
-                    {formatMoney(costAnalysis.openIssueEstimateTotal)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                    Servicios
-                  </p>
-
-                  <p className="mt-1 text-sm font-semibold text-zinc-200">
-                    {formatMoney(costAnalysis.serviceTotal)}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                    Docs
-                  </p>
-
-                  <p className="mt-1 text-sm font-semibold text-zinc-200">
-                    {formatMoney(costAnalysis.documentTotal)}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                    $/km
-                  </p>
-
-                  <p className="mt-1 text-sm font-semibold text-zinc-200">
-                    {formatMoney(costAnalysis.costPerCurrentKm)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+  <CostAnalysisPanel costAnalysis={costAnalysis} />
+)}
 
           {activePanel === "issues" && (
             <div className="space-y-3">
