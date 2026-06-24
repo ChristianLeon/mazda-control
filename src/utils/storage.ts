@@ -6,9 +6,11 @@
   initialIssues,
   initialMaintenanceRules,
   initialVehicle,
+  initialVehicleRecords,
   initialVehicleStatus,
   initialVerificationEvents,
   initialVerificationProfile,
+  initialWorkshops,
 } from "../data/initialData";
 
 import type {
@@ -54,8 +56,8 @@ export function createInitialMazdaData(): MazdaControlData {
     issues: initialIssues,
     consumables: initialConsumables,
     maintenanceRules: initialMaintenanceRules,
-    workshops: [],
-    records: [],
+    workshops: initialWorkshops,
+    records: initialVehicleRecords,
     documents: initialDocuments,
   };
 }
@@ -68,8 +70,10 @@ function normalizeMazdaData(data: Partial<MazdaControlData>): MazdaControlData {
     vehicleStatus: data.vehicleStatus ?? initialData.vehicleStatus,
     insurancePolicy: data.insurancePolicy ?? initialData.insurancePolicy,
     emergencyContacts: data.emergencyContacts ?? initialData.emergencyContacts,
-    verificationProfile: data.verificationProfile ?? initialData.verificationProfile,
-    verificationEvents: data.verificationEvents ?? initialData.verificationEvents,
+    verificationProfile:
+      data.verificationProfile ?? initialData.verificationProfile,
+    verificationEvents:
+      data.verificationEvents ?? initialData.verificationEvents,
     issues: data.issues ?? initialData.issues,
     consumables: data.consumables ?? initialData.consumables,
     maintenanceRules: data.maintenanceRules ?? initialData.maintenanceRules,
@@ -114,7 +118,9 @@ export function exportMazdaData(data: MazdaControlData) {
 
   const link = document.createElement("a");
   link.href = url;
-  link.download = `mazda-control-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `mazda-control-backup-${new Date()
+    .toISOString()
+    .slice(0, 10)}.json`;
   link.click();
 
   URL.revokeObjectURL(url);
