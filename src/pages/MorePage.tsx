@@ -1294,43 +1294,43 @@ export default function MorePage({
   );
 
   function getPanelTitle(panel: MorePanel) {
-    const titles: Record<MorePanel, { title: string; subtitle: string }> = {
-      costs: {
-        title: "Análisis de costos",
-        subtitle: "Gastos reales, estimados y costo por km",
-      },
-      issues: {
-        title: "Fallas y pendientes",
-        subtitle: "Editar, resolver o eliminar fallas",
-      },
-      documents: {
-        title: "Documentos",
-        subtitle: "Editar vigencias, costos, folios y estados",
-      },
-      workshops: {
-        title: "Talleres",
-        subtitle: "Editar proveedores y favoritos",
-      },
-      consumables: {
-        title: "Piezas / Refacciones",
-        subtitle: "Catálogo útil de piezas, fluidos y especificaciones",
-      },
-      "trip-checklist": {
-        title: "Checklist de viaje",
-        subtitle: "Revisión rápida antes de salir a carretera",
-      },
-      traffic: {
-        title: "Tránsito y circulación",
-        subtitle: "Morelia, CDMX / EdoMex y accesos oficiales",
-      },
-      backup: {
-        title: "Respaldo",
-        subtitle: "Exportar, importar o reiniciar datos locales",
-      },
-    };
+  const titles: Record<MorePanel, { title: string; subtitle: string }> = {
+    costs: {
+      title: "Análisis de costos",
+      subtitle: "Gastos reales, estimados y costo por km",
+    },
+    issues: {
+      title: "Fallas y pendientes",
+      subtitle: "Editar, resolver o eliminar fallas",
+    },
+    documents: {
+      title: "Documentos",
+      subtitle: "Editar vigencias, costos, folios y estados",
+    },
+    workshops: {
+      title: "Talleres",
+      subtitle: "Editar proveedores y favoritos",
+    },
+    consumables: {
+      title: "Piezas / Refacciones",
+      subtitle: "Catálogo útil de piezas, fluidos y especificaciones",
+    },
+    "trip-checklist": {
+      title: "Checklist de viaje",
+      subtitle: "Revisión rápida antes de salir a carretera",
+    },
+    traffic: {
+      title: "Tránsito y circulación",
+      subtitle: "Morelia, CDMX / EdoMex y accesos oficiales",
+    },
+    backup: {
+      title: "Respaldo",
+      subtitle: "Exportar, importar o reiniciar datos locales",
+    },
+  };
 
-    return titles[panel];
-  }
+  return titles[panel];
+}
 
   function saveConsumable(consumableId: string, input: NewConsumableInput) {
     onUpdateConsumable(consumableId, input);
@@ -1798,7 +1798,7 @@ export default function MorePage({
     );
   }
 
-  return (
+   return (
     <>
       <Card title="Más">
         <div className="space-y-3">
