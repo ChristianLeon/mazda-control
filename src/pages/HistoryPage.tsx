@@ -261,9 +261,9 @@ export default function HistoryPage({
   const [editWorkshopName, setEditWorkshopName] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editUpdateAsLastService, setEditUpdateAsLastService] = useState(false);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterValue>("all");
+  const [openMonthKeys, setOpenMonthKeys] = useState<string[]>([]);
 
   const sortedRecords = useMemo(() => sortRecords(records), [records]);
 
@@ -312,6 +312,22 @@ export default function HistoryPage({
     setEditingRecordId(null);
   }
 
+  function toggleMonth(monthKey: string) {
+    setOpenMonthKeys((currentMonths) =>
+      currentMonths.includes(monthKey)
+        ? currentMonths.filter((item) => item !== monthKey)
+        : [...currentMonths, monthKey]
+    );
+  }
+
+  function openAllMonths() {
+    setOpenMonthKeys(monthGroups.map((group) => group.monthKey));
+  }
+
+  function closeAllMonths() {
+    setOpenMonthKeys([]);
+  }
+
   function handleUpdate(event: FormEvent<HTMLFormElement>, recordId: string) {
     event.preventDefault();
 
@@ -350,6 +366,272 @@ export default function HistoryPage({
     if (confirmed) {
       onDeleteRecord(recordId);
     }
+  }
+
+  function renderEditForm(record: VehicleRecord) {
+    return (
+      <form
+        key={record.id}
+        onSubmit={(event) => handleUpdate(event, record.id)}
+        className="rounded-3xl border border-red-900/70 bg-zinc-900 p-4"
+      >
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-400">
+              Editando
+            </p>
+
+            <p className="mt-1 text-lg font-bold text-white">
+              Registro de historial
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={cancelEdit}
+            className="rounded-full bg-zinc-950 px-3 py-2 text-sm text-zinc-300"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Tipo
+            </label>
+
+            <select
+              value={editType}
+              onChange={(event) =>
+                setEditType(event.target.value as VehicleRecordType)
+              }
+              className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+            >
+              {recordTypes.map((recordType) => (
+                <option key={recordType.value} value={recordType.value}>
+                  {recordType.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Título
+            </label>
+
+            <input
+              value={editTitle}
+              onChange={(event) => setEditTitle(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Fecha
+              </label>
+
+              <input
+                type="date"
+                value={editDate}
+                onChange={(event) => setEditDate(event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Km
+              </label>
+
+              <input
+                value={editMileage}
+                onChange={(event) =>
+                  setEditMileage(event.target.value.replace(/[^\d]/g, ""))
+                }
+                inputMode="numeric"
+                placeholder="Sin km"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none placeholder:text-zinc-600 focus:border-red-700"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Costo
+            </label>
+
+            <input
+              value={editCost}
+              onChange={(event) =>
+                setEditCost(event.target.value.replace(/[^\d.]/g, ""))
+              }
+              inputMode="decimal"
+              placeholder="0"
+              className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none placeholder:text-zinc-600 focus:border-red-700"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Taller / proveedor
+            </label>
+
+            <select
+              value={editWorkshopId}
+              onChange={(event) => {
+                setEditWorkshopId(event.target.value);
+
+                if (event.target.value) setEditWorkshopName("");
+              }}
+              className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+            >
+              <option value="">Texto libre / no registrado</option>
+
+              {workshops.map((workshop) => (
+                <option key={workshop.id} value={workshop.id}>
+                  {workshop.name}
+                  {workshop.isFavorite ? " ★" : ""}
+                </option>
+              ))}
+            </select>
+
+            {!editWorkshopId && (
+              <input
+                value={editWorkshopName}
+                onChange={(event) => setEditWorkshopName(event.target.value)}
+                placeholder="Escribe taller o proveedor"
+                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none placeholder:text-zinc-600 focus:border-red-700"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Notas
+            </label>
+
+            <textarea
+              value={editNotes}
+              onChange={(event) => setEditNotes(event.target.value)}
+              rows={3}
+              className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
+            />
+          </div>
+
+          <label className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+            <input
+              type="checkbox"
+              checked={editUpdateAsLastService}
+              onChange={(event) =>
+                setEditUpdateAsLastService(event.target.checked)
+              }
+              className="h-5 w-5 accent-red-700"
+            />
+
+            <span className="text-sm text-zinc-200">
+              Actualizar como último servicio
+            </span>
+          </label>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="rounded-2xl border border-zinc-700 px-4 py-3 font-semibold text-zinc-300"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="submit"
+              className="rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </form>
+    );
+  }
+
+  function renderRecordCard(record: VehicleRecord) {
+    return (
+      <article
+        key={record.id}
+        className="rounded-3xl border border-zinc-800 bg-zinc-900 p-3"
+      >
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-lg">
+            {getRecordIcon(record.type)}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold text-white">{record.title}</p>
+
+                <p className="mt-1 text-xs text-zinc-500">
+                  {formatMileageLabel(record.mileage)}
+                </p>
+              </div>
+
+              <p className="shrink-0 text-sm font-semibold text-red-400">
+                {formatMoney(record.cost)}
+              </p>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${getRecordTypeClasses(
+                  record.type
+                )}`}
+              >
+                {getRecordTypeLabel(record.type)}
+              </span>
+
+              {record.updateAsLastService && (
+                <span className="rounded-full border border-red-800 bg-red-950/30 px-3 py-1 text-xs font-semibold text-red-300">
+                  Último servicio
+                </span>
+              )}
+            </div>
+
+            {(record.workshopName || record.notes) && (
+              <div className="mt-3 space-y-2 rounded-2xl bg-zinc-950 p-3 text-sm text-zinc-400">
+                {record.workshopName && (
+                  <p>
+                    <span className="text-zinc-600">Taller:</span>{" "}
+                    {record.workshopName}
+                  </p>
+                )}
+
+                {record.notes && <p>{record.notes}</p>}
+              </div>
+            )}
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => startEdit(record)}
+                className="rounded-xl bg-zinc-800 px-3 py-2 text-sm font-semibold text-zinc-200"
+              >
+                Editar
+              </button>
+
+              <button
+                onClick={() => handleDelete(record.id)}
+                className="rounded-xl border border-red-900 px-3 py-2 text-sm font-semibold text-red-400"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
   }
 
   return (
@@ -436,6 +718,24 @@ export default function HistoryPage({
 
               <span>{formatMoney(filteredTotal)}</span>
             </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={openAllMonths}
+                className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-300"
+              >
+                Abrir meses
+              </button>
+
+              <button
+                type="button"
+                onClick={closeAllMonths}
+                className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-300"
+              >
+                Contraer meses
+              </button>
+            </div>
           </div>
         </div>
       </Card>
@@ -466,335 +766,75 @@ export default function HistoryPage({
           </div>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {monthGroups.map((monthGroup) => (
-            <section
-              key={monthGroup.monthKey}
-              className="rounded-3xl border border-zinc-800 bg-zinc-950 p-3"
-            >
-              <div className="flex items-start justify-between gap-3 px-1 py-2">
-                <div>
-                  <p className="font-semibold text-white">
-                    {getMonthLabel(monthGroup.monthKey)}
-                  </p>
+        <div className="space-y-3">
+          {monthGroups.map((monthGroup) => {
+            const isMonthOpen = openMonthKeys.includes(monthGroup.monthKey);
 
-                  <p className="mt-1 text-xs text-zinc-500">
-                    {monthGroup.count} registro(s)
-                  </p>
-                </div>
+            return (
+              <section
+                key={monthGroup.monthKey}
+                className="rounded-3xl border border-zinc-800 bg-zinc-950 p-3"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleMonth(monthGroup.monthKey)}
+                  className="flex w-full items-start justify-between gap-3 px-1 py-2 text-left"
+                >
+                  <div>
+                    <p className="font-semibold text-white">
+                      {getMonthLabel(monthGroup.monthKey)}
+                    </p>
 
-                <p className="shrink-0 text-sm font-bold text-red-400">
-                  {formatMoney(monthGroup.total)}
-                </p>
-              </div>
-
-              <div className="mt-2 space-y-3">
-                {monthGroup.days.map((dayGroup) => (
-                  <div key={dayGroup.dateKey} className="space-y-2">
-                    <div className="flex items-center justify-between rounded-2xl bg-zinc-900 px-3 py-2">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-                          {dayGroup.dateKey === "sin-fecha"
-                            ? "Sin fecha"
-                            : formatDate(dayGroup.dateKey)}
-                        </p>
-
-                        <p className="mt-1 text-xs text-zinc-600">
-                          {dayGroup.records.length} movimiento(s)
-                        </p>
-                      </div>
-
-                      <p className="text-sm font-semibold text-zinc-300">
-                        {formatMoney(dayGroup.total)}
-                      </p>
-                    </div>
-
-                    {dayGroup.records.map((record) =>
-                      editingRecordId === record.id ? (
-                        <form
-                          key={record.id}
-                          onSubmit={(event) => handleUpdate(event, record.id)}
-                          className="rounded-3xl border border-red-900/70 bg-zinc-900 p-4"
-                        >
-                          <div className="mb-4 flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-400">
-                                Editando
-                              </p>
-
-                              <p className="mt-1 text-lg font-bold text-white">
-                                Registro de historial
-                              </p>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={cancelEdit}
-                              className="rounded-full bg-zinc-950 px-3 py-2 text-sm text-zinc-300"
-                            >
-                              Cerrar
-                            </button>
-                          </div>
-
-                          <div className="space-y-3">
-                            <div>
-                              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                                Tipo
-                              </label>
-                              <select
-                                value={editType}
-                                onChange={(event) =>
-                                  setEditType(
-                                    event.target.value as VehicleRecordType
-                                  )
-                                }
-                                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
-                              >
-                                {recordTypes.map((recordType) => (
-                                  <option
-                                    key={recordType.value}
-                                    value={recordType.value}
-                                  >
-                                    {recordType.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                                Título
-                              </label>
-                              <input
-                                value={editTitle}
-                                onChange={(event) =>
-                                  setEditTitle(event.target.value)
-                                }
-                                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
-                              />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                                  Fecha
-                                </label>
-                                <input
-                                  type="date"
-                                  value={editDate}
-                                  onChange={(event) =>
-                                    setEditDate(event.target.value)
-                                  }
-                                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                                  Km
-                                </label>
-                                <input
-                                  value={editMileage}
-                                  onChange={(event) =>
-                                    setEditMileage(
-                                      event.target.value.replace(/[^\d]/g, "")
-                                    )
-                                  }
-                                  inputMode="numeric"
-                                  placeholder="Sin km"
-                                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none placeholder:text-zinc-600 focus:border-red-700"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                                Costo
-                              </label>
-                              <input
-                                value={editCost}
-                                onChange={(event) =>
-                                  setEditCost(
-                                    event.target.value.replace(/[^\d.]/g, "")
-                                  )
-                                }
-                                inputMode="decimal"
-                                placeholder="0"
-                                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none placeholder:text-zinc-600 focus:border-red-700"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                                Taller / proveedor
-                              </label>
-
-                              <select
-                                value={editWorkshopId}
-                                onChange={(event) => {
-                                  setEditWorkshopId(event.target.value);
-
-                                  if (event.target.value) {
-                                    setEditWorkshopName("");
-                                  }
-                                }}
-                                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
-                              >
-                                <option value="">
-                                  Texto libre / no registrado
-                                </option>
-
-                                {workshops.map((workshop) => (
-                                  <option key={workshop.id} value={workshop.id}>
-                                    {workshop.name}
-                                    {workshop.isFavorite ? " ★" : ""}
-                                  </option>
-                                ))}
-                              </select>
-
-                              {!editWorkshopId && (
-                                <input
-                                  value={editWorkshopName}
-                                  onChange={(event) =>
-                                    setEditWorkshopName(event.target.value)
-                                  }
-                                  placeholder="Escribe taller o proveedor"
-                                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none placeholder:text-zinc-600 focus:border-red-700"
-                                />
-                              )}
-                            </div>
-
-                            <div>
-                              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                                Notas
-                              </label>
-                              <textarea
-                                value={editNotes}
-                                onChange={(event) =>
-                                  setEditNotes(event.target.value)
-                                }
-                                rows={3}
-                                className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-700"
-                              />
-                            </div>
-
-                            <label className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-                              <input
-                                type="checkbox"
-                                checked={editUpdateAsLastService}
-                                onChange={(event) =>
-                                  setEditUpdateAsLastService(
-                                    event.target.checked
-                                  )
-                                }
-                                className="h-5 w-5 accent-red-700"
-                              />
-                              <span className="text-sm text-zinc-200">
-                                Actualizar como último servicio
-                              </span>
-                            </label>
-
-                            <div className="grid grid-cols-2 gap-2">
-                              <button
-                                type="button"
-                                onClick={cancelEdit}
-                                className="rounded-2xl border border-zinc-700 px-4 py-3 font-semibold text-zinc-300"
-                              >
-                                Cancelar
-                              </button>
-
-                              <button
-                                type="submit"
-                                className="rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white"
-                              >
-                                Guardar
-                              </button>
-                            </div>
-                          </div>
-                        </form>
-                      ) : (
-                        <article
-                          key={record.id}
-                          className="rounded-3xl border border-zinc-800 bg-zinc-900 p-3"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-lg">
-                              {getRecordIcon(record.type)}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="font-semibold text-white">
-                                    {record.title}
-                                  </p>
-
-                                  <p className="mt-1 text-xs text-zinc-500">
-                                    {formatMileageLabel(record.mileage)}
-                                  </p>
-                                </div>
-
-                                <p className="shrink-0 text-sm font-semibold text-red-400">
-                                  {formatMoney(record.cost)}
-                                </p>
-                              </div>
-
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <span
-                                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${getRecordTypeClasses(
-                                    record.type
-                                  )}`}
-                                >
-                                  {getRecordTypeLabel(record.type)}
-                                </span>
-
-                                {record.updateAsLastService && (
-                                  <span className="rounded-full border border-red-800 bg-red-950/30 px-3 py-1 text-xs font-semibold text-red-300">
-                                    Último servicio
-                                  </span>
-                                )}
-                              </div>
-
-                              {(record.workshopName || record.notes) && (
-                                <div className="mt-3 space-y-2 rounded-2xl bg-zinc-950 p-3 text-sm text-zinc-400">
-                                  {record.workshopName && (
-                                    <p>
-                                      <span className="text-zinc-600">
-                                        Taller:
-                                      </span>{" "}
-                                      {record.workshopName}
-                                    </p>
-                                  )}
-
-                                  {record.notes && <p>{record.notes}</p>}
-                                </div>
-                              )}
-
-                              <div className="mt-4 grid grid-cols-2 gap-2">
-                                <button
-                                  onClick={() => startEdit(record)}
-                                  className="rounded-xl bg-zinc-800 px-3 py-2 text-sm font-semibold text-zinc-200"
-                                >
-                                  Editar
-                                </button>
-
-                                <button
-                                  onClick={() => handleDelete(record.id)}
-                                  className="rounded-xl border border-red-900 px-3 py-2 text-sm font-semibold text-red-400"
-                                >
-                                  Eliminar
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </article>
-                      )
-                    )}
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {monthGroup.count} registro(s)
+                    </p>
                   </div>
-                ))}
-              </div>
-            </section>
-          ))}
+
+                  <div className="flex shrink-0 items-center gap-3">
+                    <p className="text-sm font-bold text-red-400">
+                      {formatMoney(monthGroup.total)}
+                    </p>
+
+                    <span className="text-lg text-zinc-500">
+                      {isMonthOpen ? "−" : "+"}
+                    </span>
+                  </div>
+                </button>
+
+                {isMonthOpen && (
+                  <div className="mt-2 space-y-3">
+                    {monthGroup.days.map((dayGroup) => (
+                      <div key={dayGroup.dateKey} className="space-y-2">
+                        <div className="flex items-center justify-between rounded-2xl bg-zinc-900 px-3 py-2">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                              {dayGroup.dateKey === "sin-fecha"
+                                ? "Sin fecha"
+                                : formatDate(dayGroup.dateKey)}
+                            </p>
+
+                            <p className="mt-1 text-xs text-zinc-600">
+                              {dayGroup.records.length} movimiento(s)
+                            </p>
+                          </div>
+
+                          <p className="text-sm font-semibold text-zinc-300">
+                            {formatMoney(dayGroup.total)}
+                          </p>
+                        </div>
+
+                        {dayGroup.records.map((record) =>
+                          editingRecordId === record.id
+                            ? renderEditForm(record)
+                            : renderRecordCard(record)
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       )}
     </>
